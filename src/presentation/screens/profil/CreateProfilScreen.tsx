@@ -2,9 +2,20 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+} from 'react-native'
 import { authService } from '@/composition/auth'
-import { createUserSchema, type CreateUserInput } from '@/domain/rules/userSchema'
+import {
+  createUserSchema,
+  type CreateUserFormInput,
+  type CreateUserInput,
+} from '@/domain/rules/userSchema'
 import { userService } from '@/composition/user'
 
 type SupabaseLikeError = {
@@ -38,11 +49,14 @@ const ProfileSetupScreen = () => {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<CreateUserInput>({
+  } = useForm<CreateUserFormInput, unknown, CreateUserInput>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
       username: '',
+      nom: '',
+      prenom: '',
       bio: '',
+      dateNaissance: '',
     },
   })
 
@@ -78,7 +92,10 @@ const ProfileSetupScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.title}>Complète ton profil</Text>
       <Text style={styles.subtitle}>Ajoute quelques infos avant de continuer.</Text>
 
@@ -99,6 +116,38 @@ const ProfileSetupScreen = () => {
       />
       {errors.username && <Text style={styles.errorText}>{errors.username.message}</Text>}
 
+      <Text style={styles.label}>Nom</Text>
+      <Controller
+        control={control}
+        name="nom"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextInput
+            style={styles.input}
+            placeholder="Entrez ton nom"
+            value={value}
+            onChangeText={onChange}
+            onBlur={onBlur}
+          />
+        )}
+      />
+      {errors.nom && <Text style={styles.errorText}>{errors.nom.message}</Text>}
+
+      <Text style={styles.label}>Prénom</Text>
+      <Controller
+        control={control}
+        name="prenom"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextInput
+            style={styles.input}
+            placeholder="Entrez ton prénom"
+            value={value}
+            onChangeText={onChange}
+            onBlur={onBlur}
+          />
+        )}
+      />
+      {errors.prenom && <Text style={styles.errorText}>{errors.prenom.message}</Text>}
+
       <Text style={styles.label}>Bio</Text>
       <Controller
         control={control}
@@ -116,6 +165,26 @@ const ProfileSetupScreen = () => {
         )}
       />
       {errors.bio && <Text style={styles.errorText}>{errors.bio.message}</Text>}
+
+      <Text style={styles.label}>Date de naissance</Text>
+      <Controller
+        control={control}
+        name="dateNaissance"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextInput
+            style={styles.input}
+            placeholder="AAAA-MM-JJ"
+            keyboardType="numbers-and-punctuation"
+            value={value}
+            onChangeText={onChange}
+            onBlur={onBlur}
+          />
+        )}
+      />
+      {errors.dateNaissance && (
+        <Text style={styles.errorText}>{errors.dateNaissance.message}</Text>
+      )}
+
       {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
       <Pressable
@@ -129,7 +198,7 @@ const ProfileSetupScreen = () => {
       <Pressable onPress={handleSignOut} style={styles.signOutButton}>
         <Text style={styles.signOutButtonText}>Se deconnecter</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   )
 }
 
@@ -137,7 +206,7 @@ export default ProfileSetupScreen
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 16,
     justifyContent: 'center',
     backgroundColor: '#F9FAFB',

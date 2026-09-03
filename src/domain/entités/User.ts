@@ -1,9 +1,12 @@
 
-export interface UserModel {
+export interface ProfilModel {
   id: string
-  username: string
+  username?: string
+  nom?: string
+  prenom?: string
   bio?: string
+  dateNaissance?: Date
   createdAt: Date
 }
 
-export type CreateUserModel = Omit<UserModel, 'id' | 'createdAt'>
+export type CreateProfilModel = Omit<ProfilModel, 'id' | 'createdAt'>

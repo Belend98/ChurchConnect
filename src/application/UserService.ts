@@ -1,5 +1,5 @@
 import type { AuthService } from '@/application/AuthService'
-import type { CreateUserModel } from '@/domain/entités/User'
+import type { CreateProfilModel } from '@/domain/entités/User'
 import type { UserRepository } from '@/domain/repositories/UserRepository'
 export class UserService {
   constructor(
@@ -7,7 +7,7 @@ export class UserService {
     private readonly authService: AuthService,
   ) {}
 
-  createProfile(userId: string, data: CreateUserModel) {
+  createProfile(userId: string, data: CreateProfilModel) {
     return this.userRepository.createProfile(userId, data)
   }
 
@@ -27,7 +27,7 @@ export class UserService {
     }
   }
 
-  async updateCurrentUserProfile(data: CreateUserModel) {
+  async updateCurrentUserProfile(data: CreateProfilModel) {
     const userId = await this.authService.getCurrentUserIdOrThrow()
     await this.userRepository.updateProfile(userId, data)
   }
