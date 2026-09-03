@@ -1,5 +1,5 @@
 import { authService } from '@/composition/auth'
-import { userService } from '@/composition/user'
+import { profilService } from '@/composition/profil'
 import { router } from 'expo-router'
 import { useEffect } from 'react'
 
@@ -14,11 +14,11 @@ export function useInitialRoute() {
           return
         }
 
-        const profile = await userService.getMyProfile(user.id)
+        const profile = await profilService.getMyProfile(user.id)
         if (profile) {
           router.replace('/(tabs)/home')
         } else {
-          router.replace('/')
+          router.replace('/(auth)/profil')
         }
       } catch (error) {
         console.error('Erreur lors de la récupération du profil:', error)

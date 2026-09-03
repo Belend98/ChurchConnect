@@ -1,6 +1,6 @@
-import type { CreateProfilModel, ProfilModel } from '../entités/User'
+import type { CreateProfilModel, ProfilModel } from '../entités/Profil'
 
-export interface UserRepository {
+export interface ProfilRepository {
   createProfile(userId: string, data: CreateProfilModel): Promise<void>
   getProfile(userId: string): Promise<ProfilModel | null>
   updateProfile(userId: string, data: CreateProfilModel): Promise<void>

@@ -20,7 +20,7 @@ const SignUpScreen = () => {
       const result = await authService.signUp(data.email, data.password)
       if (result.hasSession) {
         Alert.alert('Compte crée', 'Inscription réussie.')
-        router.replace('/(tabs)/home')
+        router.replace('/(auth)/profil')
         return
       }
       Alert.alert(

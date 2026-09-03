@@ -1,10 +1,10 @@
-import type { CreateProfilModel, ProfilModel } from '@/domain/entités/User'
-import type { UserRepository } from '@/domain/repositories/UserRepository'
+import type { CreateProfilModel, ProfilModel } from '@/domain/entités/Profil'
+import type { ProfilRepository } from '@/domain/repositories/ProfilRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 
-export class SupabaseUserRepository implements UserRepository {
+export class SupabaseProfilRepository implements ProfilRepository {
   async createProfile(userId: string, data: CreateProfilModel): Promise<void> {
-    const { error } = await supabase.from('users').upsert(
+    const { error } = await supabase.from('user_profil').upsert(
       {
         id: userId,
         username: data.username ?? null,
@@ -12,6 +12,7 @@ export class SupabaseUserRepository implements UserRepository {
         prenom: data.prenom ?? null,
         bio: data.bio ?? null,
         date_naissance: data.dateNaissance?.toISOString() ?? null,
+        is_admin: data.isAdmin ?? false,
       },
       {
         onConflict: 'id',
@@ -23,9 +24,9 @@ export class SupabaseUserRepository implements UserRepository {
 
   async getProfile(userId: string): Promise<ProfilModel | null> {
     const { data, error } = await supabase
-      .from('users')
+      .from('user_profil')
       .select(
-        'id, username, nom, prenom, bio, date_naissance, created_at',
+        'id, username, nom, prenom, bio, date_naissance, created_at, is_admin',
       )
       .eq('id', userId)
       .maybeSingle()
@@ -42,19 +43,21 @@ export class SupabaseUserRepository implements UserRepository {
       dateNaissance: data.date_naissance
         ? new Date(data.date_naissance as string)
         : undefined,
+      isAdmin: Boolean(data.is_admin),
       createdAt: new Date(data.created_at as string),
     }
   }
 
   async updateProfile(userId: string, data: CreateProfilModel): Promise<void> {
     const { error } = await supabase
-      .from('users')
+      .from('user_profil')
       .update({
         username: data.username ?? null,
         nom: data.nom ?? null,
         prenom: data.prenom ?? null,
         bio: data.bio ?? null,
         date_naissance: data.dateNaissance?.toISOString() ?? null,
+        ...(data.isAdmin !== undefined ? { is_admin: data.isAdmin } : {}),
       })
       .eq('id', userId)
 
@@ -62,7 +65,18 @@ export class SupabaseUserRepository implements UserRepository {
   }
 
   async deleteAccountData(): Promise<void> {
-    const { error } = await supabase.rpc('delete_current_user_account_data')
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError) throw userError
+    if (!user) return
+
+    const { error } = await supabase
+      .from('user_profil')
+      .delete()
+      .eq('id', user.id)
 
     if (error) throw error
   }

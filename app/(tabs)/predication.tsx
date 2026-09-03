@@ -1,12 +1,1 @@
-import { EmptySection, ScreenLayout } from '@/presentation/components/ScreenLayout'
-
-export default function PredicationScreen() {
-  return (
-    <ScreenLayout
-      title="Prédication"
-      description="Un espace simple pour préparer le contenu de la prédication."
-    >
-      <EmptySection label="Aucun contenu pour le moment." />
-    </ScreenLayout>
-  )
-}
+export { default } from '@/presentation/screens/predication/PredicationScreen'

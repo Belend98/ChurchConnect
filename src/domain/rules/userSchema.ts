@@ -1,4 +1,4 @@
-import type { CreateProfilModel } from '../entités/User'
+import type { CreateProfilModel } from '../entités/Profil'
 import { z } from 'zod'
 
 export const createUserSchema = z.object({

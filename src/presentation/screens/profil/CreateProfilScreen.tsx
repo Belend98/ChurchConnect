@@ -16,7 +16,7 @@ import {
   type CreateUserFormInput,
   type CreateUserInput,
 } from '@/domain/rules/userSchema'
-import { userService } from '@/composition/user'
+import { profilService } from '@/composition/profil'
 
 type SupabaseLikeError = {
   code?: string
@@ -83,7 +83,7 @@ const ProfileSetupScreen = () => {
     }
 
     try {
-      await userService.createProfile(user.id, data)
+      await profilService.createProfile(user.id, data)
       Alert.alert('Profil crée', 'Ton profil est pret.')
       router.replace('../(tabs)/home')
     } catch (error) {
