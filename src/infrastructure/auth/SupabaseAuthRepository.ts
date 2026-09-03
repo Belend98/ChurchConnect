@@ -1,7 +1,7 @@
 import type { User } from '@supabase/supabase-js'
 import type { AuthUser } from '@/domain/entités/AuthUser'
 import type { AuthResult, AuthRepository } from '@/domain/repositories/AuthRepository'
-import { supabase } from '../client'
+import { supabase } from '../supabase/client'
 
 function mapUser(user: User | null): AuthUser | null {
   if (!user) return null

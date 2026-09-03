@@ -1,4 +1,4 @@
-import type { AuthService } from '@/application/authService'
+import type { AuthService } from '@/application/AuthService'
 import type { CreateUserModel } from '@/domain/entités/User'
 import type { UserRepository } from '@/domain/repositories/UserRepository'
 export class UserService {

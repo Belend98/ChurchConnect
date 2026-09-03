@@ -10,7 +10,7 @@ export function useInitialRoute() {
         const user = await authService.getCurrentUser()
 
         if (!user) {
-          router.replace('/(auth)/signup' as never)
+          router.replace('/(auth)/signup')
           return
         }
 
@@ -22,7 +22,7 @@ export function useInitialRoute() {
         }
       } catch (error) {
         console.error('Erreur lors de la récupération du profil:', error)
-        router.replace('/(auth)/signup' as never)
+        router.replace('/(auth)/signup')
       }
     }
 
