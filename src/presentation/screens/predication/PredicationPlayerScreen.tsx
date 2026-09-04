@@ -11,9 +11,6 @@ import {
   View,
 } from 'react-native'
 
-const demoAudioUrl =
-  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
-
 const speeds = [1, 1.25, 1.5, 0.75]
 
 function formatTime(seconds?: number | null): string {
@@ -35,28 +32,27 @@ export default function PredicationPlayerScreen() {
     durationSeconds?: string
   }>()
   const [speedIndex, setSpeedIndex] = useState(0)
-  const [isFavorite, setIsFavorite] = useState(true)
+  const [isFavorite, setIsFavorite] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
 
-  const audioSource = useMemo(
-    () => params.mediaUrl || demoAudioUrl,
-    [params.mediaUrl],
-  )
+  const audioSource = useMemo(() => params.mediaUrl ?? null, [params.mediaUrl])
   const player = useAudioPlayer(audioSource, { updateInterval: 500 })
   const status = useAudioPlayerStatus(player)
 
-  const title = params.title ?? 'Marcher avec confiance dans la tempête'
-  const speaker = params.speaker ?? 'Pasteur David Mercier'
-  const reference = params.reference ?? 'Marc 4:35-41'
-  const serie = params.serie ?? 'Vivre la Paix'
+  const title = params.title ?? 'Prédication'
+  const speaker = params.speaker
+  const reference = params.reference
+  const serie = params.serie ?? 'Prédication'
   const duration =
-    status.duration || Number(params.durationSeconds) || 32 * 60 + 10
+    status.duration || Number(params.durationSeconds) || status.currentTime
   const progress = duration > 0 ? status.currentTime / duration : 0
   const progressWidth = `${
     Math.min(Math.max(progress, 0), 1) * 100
   }%` as DimensionValue
 
   function togglePlayback() {
+    if (!params.mediaUrl) return
+
     if (status.playing) {
       player.pause()
       return
@@ -100,9 +96,13 @@ export default function PredicationPlayerScreen() {
           <Text style={styles.heroDate}>28 avril</Text>
         </View>
         <Text style={styles.heroTitle}>{title}</Text>
-        <Text style={styles.heroSubtitle}>{`${speaker} · ${reference}`}</Text>
+        {speaker || reference ? (
+          <Text style={styles.heroSubtitle}>
+            {[speaker, reference].filter(Boolean).join(' · ')}
+          </Text>
+        ) : null}
         {!params.mediaUrl ? (
-          <Text style={styles.demoNotice}>Audio de démonstration</Text>
+          <Text style={styles.playerNotice}>Aucun fichier audio disponible</Text>
         ) : null}
       </View>
 
@@ -120,7 +120,7 @@ export default function PredicationPlayerScreen() {
             <Text style={styles.currentTime}>
               {formatTime(status.currentTime)}
             </Text>
-            <Text style={styles.episode}>Matthieu · Épisode 12</Text>
+            <Text style={styles.episode}>{serie}</Text>
             <Text style={styles.totalTime}>{formatTime(duration)}</Text>
           </View>
         </View>
@@ -154,7 +154,7 @@ export default function PredicationPlayerScreen() {
               ♥
             </Text>
             <Text style={[styles.actionText, isLiked && styles.actionActive]}>
-              {isLiked ? '235' : '234'}
+              {isLiked ? 'Aimé' : 'Aimer'}
             </Text>
           </Pressable>
           <Pressable
@@ -190,37 +190,11 @@ export default function PredicationPlayerScreen() {
       </View>
 
       <View style={styles.noteCard}>
-        <Text style={styles.cardTitle}>Verset clé</Text>
-        <Text style={styles.quote}>
-          {
-            "« Pourquoi avez-vous ainsi peur ? Comment n'avez-vous point de foi ? »"
-          }
+        <Text style={styles.cardTitle}>Résumé non disponible</Text>
+        <Text style={styles.emptyText}>
+          Les notes, la retranscription et les questions pourront être affichées
+          quand ces données seront ajoutées en base.
         </Text>
-        <Text style={styles.quoteRef}>Marc 4:40</Text>
-      </View>
-
-      <View style={styles.noteCard}>
-        <Text style={styles.cardTitle}>{"Trois points d'ancrage"}</Text>
-        <View style={styles.point}>
-          <Text style={styles.pointNumber}>1</Text>
-          <Text style={styles.pointText}>
-            {"La tempête ne signifie pas l'absence de Dieu."}
-          </Text>
-        </View>
-        <View style={styles.point}>
-          <Text style={styles.pointNumberSecondary}>2</Text>
-          <Text style={styles.pointText}>
-            Sa voix recentre le cœur avant de calmer les circonstances.
-          </Text>
-        </View>
-        <View style={styles.point}>
-          <Text style={styles.pointNumber}>3</Text>
-          <Text style={styles.pointText}>
-            {
-              'La paix biblique commence par une confiance remise entre ses mains.'
-            }
-          </Text>
-        </View>
       </View>
     </ScrollView>
   )
@@ -306,7 +280,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 21,
   },
-  demoNotice: {
+  playerNotice: {
     color: colors.secondaryContainer,
     fontSize: 12,
     fontWeight: '800',
@@ -481,57 +455,9 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '900',
   },
-  quote: {
-    backgroundColor: colors.surfaceContainerLow,
-    borderLeftColor: colors.secondaryContainer,
-    borderLeftWidth: 4,
-    borderRadius: 10,
-    color: colors.onSurface,
-    fontSize: 16,
-    fontStyle: 'italic',
-    fontWeight: '600',
-    lineHeight: 24,
-    padding: 14,
-  },
-  quoteRef: {
-    color: colors.outline,
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  point: {
-    alignItems: 'flex-start',
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 10,
-    flexDirection: 'row',
-    gap: 12,
-    padding: 14,
-  },
-  pointNumber: {
-    backgroundColor: colors.primaryContainer,
-    borderRadius: 14,
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  pointNumberSecondary: {
-    backgroundColor: colors.secondary,
-    borderRadius: 14,
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-  },
-  pointText: {
-    color: colors.primary,
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '800',
+  emptyText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 14,
     lineHeight: 22,
   },
 })

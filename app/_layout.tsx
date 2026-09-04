@@ -9,7 +9,10 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
+          <Stack.Screen name="create-groupe" />
+          <Stack.Screen name="groupe-detail" />
           <Stack.Screen name="create-predication" />
+          <Stack.Screen name="update-predication" />
           <Stack.Screen name="predication-player" />
         </Stack>
       </SafeAreaView>

@@ -7,18 +7,18 @@ import type { GroupeRepository } from '@/domain/repositories/GroupeRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 
 type GroupeRow = {
-  id: string
+  groupe_id: string
   name: string
   description: string | null
   created_by: string | null
   created_at: string
 }
 
-const GROUPE_SELECT = 'id, name, description, created_by, created_at'
+const GROUPE_SELECT = 'groupe_id, name, description, created_by, created_at'
 
 function mapGroupe(row: GroupeRow): GroupeModel {
   return {
-    id: row.id,
+    id: row.groupe_id,
     name: row.name,
     description: row.description ?? undefined,
     createdBy: row.created_by ?? undefined,
@@ -29,7 +29,7 @@ function mapGroupe(row: GroupeRow): GroupeModel {
 export class SupabaseGroupeRepository implements GroupeRepository {
   async create(data: CreateGroupeModel): Promise<GroupeModel> {
     const { data: groupe, error } = await supabase
-      .from('groupes')
+      .from('groupe')
       .insert({
         name: data.name,
         description: data.description ?? null,
@@ -45,9 +45,9 @@ export class SupabaseGroupeRepository implements GroupeRepository {
 
   async getById(id: string): Promise<GroupeModel | null> {
     const { data, error } = await supabase
-      .from('groupes')
+      .from('groupe')
       .select(GROUPE_SELECT)
-      .eq('id', id)
+      .eq('groupe_id', id)
       .maybeSingle()
 
     if (error) throw error
@@ -58,7 +58,7 @@ export class SupabaseGroupeRepository implements GroupeRepository {
 
   async list(): Promise<GroupeModel[]> {
     const { data, error } = await supabase
-      .from('groupes')
+      .from('groupe')
       .select(GROUPE_SELECT)
       .order('created_at', { ascending: false })
 
@@ -71,9 +71,9 @@ export class SupabaseGroupeRepository implements GroupeRepository {
     if (ids.length === 0) return []
 
     const { data, error } = await supabase
-      .from('groupes')
+      .from('groupe')
       .select(GROUPE_SELECT)
-      .in('id', ids)
+      .in('groupe_id', ids)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -83,14 +83,14 @@ export class SupabaseGroupeRepository implements GroupeRepository {
 
   async update(id: string, data: UpdateGroupeModel): Promise<GroupeModel> {
     const { data: groupe, error } = await supabase
-      .from('groupes')
+      .from('groupe')
       .update({
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.description !== undefined
           ? { description: data.description ?? null }
           : {}),
       })
-      .eq('id', id)
+      .eq('groupe_id', id)
       .select(GROUPE_SELECT)
       .single()
 
@@ -100,7 +100,10 @@ export class SupabaseGroupeRepository implements GroupeRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('groupes').delete().eq('id', id)
+    const { error } = await supabase
+      .from('groupe')
+      .delete()
+      .eq('groupe_id', id)
 
     if (error) throw error
   }

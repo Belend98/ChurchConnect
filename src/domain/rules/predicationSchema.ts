@@ -1,7 +1,14 @@
 import { z } from 'zod'
 
 export const createPredicationSchema = z.object({
-  categorieId: z.string().trim().optional(),
+  categorieId: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => !value || z.string().uuid().safeParse(value).success,
+      'La catégorie doit être un identifiant UUID valide.',
+    ),
   durationMinutes: z
     .string()
     .trim()
@@ -10,7 +17,14 @@ export const createPredicationSchema = z.object({
       (value) => !value || Number.isFinite(Number(value)),
       'La durée doit être un nombre.',
     ),
-  mediaUrl: z.string().trim().url('Entre une URL audio valide.'),
+  mediaUrl: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (value) => !value || z.string().url().safeParse(value).success,
+      'Entre une URL audio valide.',
+    ),
   title: z.string().trim().min(1, 'Le titre est obligatoire.'),
 })
 

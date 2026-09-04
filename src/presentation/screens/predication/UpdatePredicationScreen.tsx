@@ -8,7 +8,7 @@ import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as DocumentPicker from 'expo-document-picker'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import {
@@ -28,7 +28,22 @@ type SelectedAudioFile = {
   uri: string
 }
 
-export default function CreatePredicationScreen() {
+function getParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? ''
+  return value ?? ''
+}
+
+function secondsToMinutes(value: string): string {
+  const seconds = Number(value)
+
+  if (!Number.isFinite(seconds) || seconds <= 0) return ''
+
+  return String(Math.round(seconds / 60))
+}
+
+export default function UpdatePredicationScreen() {
+  const params = useLocalSearchParams()
+  const predicationId = getParam(params.id)
   const [errorText, setErrorText] = useState<string | null>(null)
   const [selectedAudio, setSelectedAudio] = useState<SelectedAudioFile | null>(
     null,
@@ -40,10 +55,10 @@ export default function CreatePredicationScreen() {
   } = useForm<CreatePredicationInput>({
     resolver: zodResolver(createPredicationSchema),
     defaultValues: {
-      categorieId: '',
-      durationMinutes: '',
-      mediaUrl: '',
-      title: '',
+      categorieId: getParam(params.categorieId),
+      durationMinutes: secondsToMinutes(getParam(params.durationSeconds)),
+      mediaUrl: getParam(params.mediaUrl),
+      title: getParam(params.title),
     },
   })
 
@@ -76,6 +91,11 @@ export default function CreatePredicationScreen() {
     setErrorText(null)
 
     try {
+      if (!predicationId) {
+        setErrorText("Identifiant de prédication manquant.")
+        return
+      }
+
       if (!selectedAudio && !data.mediaUrl?.trim()) {
         setErrorText('Choisis un fichier audio ou entre une URL audio.')
         return
@@ -89,7 +109,7 @@ export default function CreatePredicationScreen() {
         const response = await fetch(selectedAudio.uri)
         const audio = await response.arrayBuffer()
 
-        await predicationService.createPredicationWithAudio({
+        await predicationService.updatePredicationWithAudio(predicationId, {
           audio,
           categorieId: data.categorieId?.trim() || undefined,
           contentType: selectedAudio.contentType,
@@ -98,7 +118,7 @@ export default function CreatePredicationScreen() {
           title: data.title.trim(),
         })
       } else {
-        await predicationService.createPredication({
+        await predicationService.updatePredication(predicationId, {
           categorieId: data.categorieId?.trim() || undefined,
           durationSeconds,
           mediaUrl: data.mediaUrl?.trim() ?? '',
@@ -106,7 +126,7 @@ export default function CreatePredicationScreen() {
         })
       }
 
-      Alert.alert('Prédication créée', 'Elle est maintenant enregistrée.')
+      Alert.alert('Prédication modifiée', 'Les changements sont enregistrés.')
       router.back()
     } catch (error) {
       setErrorText(toErrorMessage(error))
@@ -127,10 +147,10 @@ export default function CreatePredicationScreen() {
       </View>
 
       <View>
-        <Text style={styles.eyebrow}>Nouvelle ressource</Text>
-        <Text style={styles.title}>Créer une prédication</Text>
+        <Text style={styles.eyebrow}>Ressource existante</Text>
+        <Text style={styles.title}>Modifier la prédication</Text>
         <Text style={styles.intro}>
-          Renseigne les données de base attendues par le modèle de prédication.
+          Mets à jour les données enregistrées pour cette prédication.
         </Text>
       </View>
 
@@ -158,7 +178,7 @@ export default function CreatePredicationScreen() {
         <View style={styles.fileBox}>
           <View style={styles.fileInfo}>
             <Text style={styles.fileTitle}>
-              {selectedAudio ? selectedAudio.fileName : 'Aucun fichier choisi'}
+              {selectedAudio ? selectedAudio.fileName : 'Audio actuel conservé'}
             </Text>
             <Text style={styles.fileMeta}>
               {selectedAudio
@@ -167,7 +187,7 @@ export default function CreatePredicationScreen() {
                       ? ` · ${Math.round(selectedAudio.size / 1024 / 1024)} Mo`
                       : ''
                   }`
-                : 'MP3, M4A, WAV ou autre fichier audio'}
+                : 'Choisis un fichier seulement pour remplacer l’audio'}
             </Text>
           </View>
           <Pressable onPress={pickAudioFile} style={styles.fileButton}>
@@ -240,7 +260,7 @@ export default function CreatePredicationScreen() {
           style={[styles.button, isSubmitting && styles.buttonDisabled]}
         >
           <Text style={styles.buttonText}>
-            {isSubmitting ? 'Création...' : 'Créer la prédication'}
+            {isSubmitting ? 'Modification...' : 'Modifier la prédication'}
           </Text>
         </Pressable>
       </View>

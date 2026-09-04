@@ -1,28 +1,55 @@
+import { groupeService } from '@/composition/groupe'
+import { predicationService } from '@/composition/predication'
+import type { GroupeModel } from '@/domain/entités/Groupe'
+import type { PredicationModel } from '@/domain/entités/Predication'
 import { colors } from '@/shared/theme/colors'
+import { useFocusEffect } from 'expo-router'
+import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 const shortcuts = [
   { label: 'Mes groupes', color: colors.primary, backgroundColor: '#d5e3ff' },
   { label: 'Cultes', color: colors.secondary, backgroundColor: '#ffdbcf' },
-  { label: 'Prière', color: '#002234', backgroundColor: colors.tertiaryFixed },
-]
-
-const announcements = [
-  {
-    title: 'Fête paroissiale',
-    date: 'Dimanche 15 mai',
-    description: 'Repas partagé, temps fraternel et barbecue après le culte.',
-    tag: 'Important',
-  },
-  {
-    title: 'Camp des jeunes',
-    date: '7 au 14 juillet',
-    description: 'Les inscriptions sont ouvertes pour les 12-17 ans.',
-    tag: 'Cette semaine',
-  },
+  { label: 'Prière', color: colors.tertiary, backgroundColor: colors.tertiaryFixed },
 ]
 
 export default function HomeScreen() {
+  const [groups, setGroups] = useState<GroupeModel[]>([])
+  const [predications, setPredications] = useState<PredicationModel[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true
+      setIsLoading(true)
+
+      Promise.all([
+        groupeService.listGroupes(),
+        predicationService.listPredications(),
+      ])
+        .then(([groupItems, predicationItems]) => {
+          if (!isMounted) return
+          setGroups(groupItems)
+          setPredications(predicationItems)
+        })
+        .catch((error) => {
+          if (!isMounted) return
+          console.warn(error)
+          setGroups([])
+          setPredications([])
+        })
+        .finally(() => {
+          if (isMounted) setIsLoading(false)
+        })
+
+      return () => {
+        isMounted = false
+      }
+    }, []),
+  )
+
+  const latestPredication = predications[0]
+
   return (
     <ScrollView
       contentContainerStyle={styles.content}
@@ -32,10 +59,10 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.eyebrow}>Communauté réunie</Text>
-          <Text style={styles.title}>Bonjour Claire,</Text>
+          <Text style={styles.title}>Bonjour,</Text>
         </View>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>C</Text>
+          <Text style={styles.avatarText}>F</Text>
         </View>
       </View>
 
@@ -46,12 +73,10 @@ export default function HomeScreen() {
       <View style={styles.verseCard}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionLabel}>Méditation du jour</Text>
-          <Text style={styles.sectionMeta}>Mt 18:20</Text>
+          <Text style={styles.sectionMeta}>À venir</Text>
         </View>
         <Text style={styles.verseText}>
-          {
-            "« Car là où deux ou trois sont assemblés en mon nom, je suis au milieu d'eux. »"
-          }
+          Aucun verset enregistré pour le moment.
         </Text>
       </View>
 
@@ -76,36 +101,55 @@ export default function HomeScreen() {
       <View style={styles.sermonCard}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Dernière prédication</Text>
-          <Text style={styles.sectionMeta}>28 min</Text>
+          <Text style={styles.sectionMeta}>
+            {isLoading ? 'Chargement' : `${predications.length} total`}
+          </Text>
         </View>
-        <Text style={styles.sermonTitle}>
-          La paix qui surpasse toute intelligence
-        </Text>
-        <Text style={styles.sermonSubtitle}>
-          Pasteur Jean-Marc et Sarah · Série : Cœurs affermis
-        </Text>
-        <Pressable style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Écouter</Text>
-        </Pressable>
+        {latestPredication ? (
+          <>
+            <Text style={styles.sermonTitle}>{latestPredication.title}</Text>
+            <Text style={styles.sermonSubtitle}>
+              {latestPredication.categorieId ?? 'Prédication'}
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.sermonSubtitle}>
+            Aucune prédication enregistrée pour le moment.
+          </Text>
+        )}
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Vie de la communauté</Text>
-        <Text style={styles.badge}>2</Text>
+        <Text style={styles.sectionTitle}>Mes groupes</Text>
+        <Text style={styles.badge}>{groups.length}</Text>
       </View>
 
       <View style={styles.announcementList}>
-        {announcements.map((item) => (
-          <View key={item.title} style={styles.announcementCard}>
+        {groups.map((group) => (
+          <View key={group.id} style={styles.announcementCard}>
             <View style={styles.announcementTopLine}>
-              <Text style={styles.announcementDate}>{item.date}</Text>
-              <Text style={styles.tag}>{item.tag}</Text>
+              <Text style={styles.announcementDate}>
+                {group.createdAt.toLocaleDateString('fr-FR')}
+              </Text>
+              <Text style={styles.tag}>Membre</Text>
             </View>
-            <Text style={styles.announcementTitle}>{item.title}</Text>
-            <Text style={styles.announcementDescription}>{item.description}</Text>
+            <Text style={styles.announcementTitle}>{group.name}</Text>
+            <Text style={styles.announcementDescription}>
+              {group.description ?? 'Aucune description.'}
+            </Text>
           </View>
         ))}
       </View>
+
+      {!isLoading && groups.length === 0 ? (
+        <View style={styles.announcementCard}>
+          <Text style={styles.announcementTitle}>Aucun groupe</Text>
+          <Text style={styles.announcementDescription}>
+            Vos groupes apparaîtront ici lorsque vous en créerez ou rejoindrez
+            un.
+          </Text>
+        </View>
+      ) : null}
     </ScrollView>
   )
 }

@@ -8,3 +8,4 @@ export interface PredicationModel {
 }
 
 export type CreatePredicationModel = Omit<PredicationModel, 'id' | 'createdAt'>
+export type UpdatePredicationModel = CreatePredicationModel

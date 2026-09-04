@@ -1,4 +1,8 @@
+import { groupeService } from '@/composition/groupe'
+import type { GroupeModel } from '@/domain/entités/Groupe'
 import { colors } from '@/shared/theme/colors'
+import { router, useFocusEffect } from 'expo-router'
+import { useCallback, useState } from 'react'
 import {
   Pressable,
   ScrollView,
@@ -10,70 +14,60 @@ import {
 
 const filters = ['Toutes', 'Non lus', 'Mes groupes', 'Archivés']
 
-const groups = [
-  {
-    name: 'Annonces et Paroisse Saint-Paul',
-    lastSender: 'Père Matthieu',
-    lastMessage: 'Horaires modifiés pour la messe des familles dimanche.',
-    time: '08:45',
-    members: 142,
-    unread: 1,
-    meta: 'Épinglé',
-    initial: 'A',
-    backgroundColor: colors.primary,
-    textColor: '#ffffff',
-  },
-  {
-    name: 'Groupe de partage - Mardi soir',
-    lastSender: 'Marie P.',
-    lastMessage: "Merci à tous pour les prières d'hier.",
-    time: '14:22',
-    members: 8,
-    unread: 3,
-    meta: 'Rencontre mardi 19h30',
-    initial: 'M',
-    backgroundColor: colors.secondaryFixed,
-    textColor: colors.secondary,
-  },
-  {
-    name: 'Fraternité jeunes et étudiants',
-    lastSender: 'Thomas B.',
-    lastMessage: 'Rendez-vous vendredi 19h avec vos bibles.',
-    time: '11:05',
-    members: 28,
-    unread: 0,
-    meta: 'Actif il y a 2h',
-    initial: 'J',
-    backgroundColor: colors.primaryFixed,
-    textColor: colors.primary,
-  },
-  {
-    name: 'Cercle entraide et aînés',
-    lastSender: 'Hélène',
-    lastMessage: 'Le planning des visites de mai est finalisé.',
-    time: 'Hier',
-    members: 19,
-    unread: 0,
-    meta: 'Visites à domicile',
-    initial: 'E',
-    backgroundColor: colors.tertiaryFixed,
-    textColor: colors.primary,
-  },
-  {
-    name: 'Louange et répétitions',
-    lastSender: 'Marc',
-    lastMessage: 'Partitions envoyées pour le prochain culte.',
-    time: 'Mardi',
-    members: 12,
-    unread: 0,
-    meta: 'Répétition jeudi 20h',
-    initial: 'L',
-    backgroundColor: colors.surfaceContainerHigh,
-    textColor: colors.primary,
-  },
+const avatarColors = [
+  colors.primary,
+  colors.secondaryFixed,
+  colors.primaryFixed,
+  colors.tertiaryFixed,
+  colors.surfaceContainerHigh,
 ]
 
 export default function GroupeScreen() {
+  const [groups, setGroups] = useState<GroupeModel[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true
+      setIsLoading(true)
+
+      groupeService
+        .listGroupes()
+        .then((items) => {
+          if (!isMounted) return
+          setGroups(items)
+        })
+        .catch((error) => {
+          if (!isMounted) return
+          console.warn(error)
+          setGroups([])
+        })
+        .finally(() => {
+          if (isMounted) setIsLoading(false)
+        })
+
+      return () => {
+        isMounted = false
+      }
+    }, []),
+  )
+
+  function openCreateGroupe() {
+    router.push('/create-groupe' as never)
+  }
+
+  function openGroupe(group: GroupeModel) {
+    router.push(
+      {
+        pathname: '/groupe-detail',
+        params: {
+          id: group.id,
+          name: group.name,
+        },
+      } as never,
+    )
+  }
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -85,7 +79,9 @@ export default function GroupeScreen() {
             <Text style={styles.eyebrow}>Échanges fraternels</Text>
             <Text style={styles.title}>Mes groupes</Text>
           </View>
-          <Text style={styles.countBadge}>{groups.length} actifs</Text>
+          <Text style={styles.countBadge}>
+            {isLoading ? 'Chargement' : `${groups.length} actifs`}
+          </Text>
         </View>
 
         <Text style={styles.intro}>
@@ -109,7 +105,7 @@ export default function GroupeScreen() {
             <Text style={styles.createText}>
               Lancez un espace de discussion puis invitez les membres concernés.
             </Text>
-            <Pressable style={styles.createButton}>
+            <Pressable onPress={openCreateGroupe} style={styles.createButton}>
               <Text style={styles.createButtonText}>Nouveau groupe</Text>
             </Pressable>
           </View>
@@ -141,16 +137,33 @@ export default function GroupeScreen() {
         </ScrollView>
 
         <View style={styles.groupList}>
-          {groups.map((group) => (
-            <Pressable key={group.name} style={styles.groupRow}>
+          {groups.map((group, index) => (
+            <Pressable
+              key={group.id}
+              onPress={() => openGroupe(group)}
+              style={styles.groupRow}
+            >
               <View
                 style={[
                   styles.groupAvatar,
-                  { backgroundColor: group.backgroundColor },
+                  {
+                    backgroundColor:
+                      avatarColors[index % avatarColors.length],
+                  },
                 ]}
               >
-                <Text style={[styles.groupInitial, { color: group.textColor }]}>
-                  {group.initial}
+                <Text
+                  style={[
+                    styles.groupInitial,
+                    {
+                      color:
+                        index % avatarColors.length === 0
+                          ? '#ffffff'
+                          : colors.primary,
+                    },
+                  ]}
+                >
+                  {group.name.charAt(0).toUpperCase()}
                 </Text>
               </View>
 
@@ -159,35 +172,34 @@ export default function GroupeScreen() {
                   <Text numberOfLines={1} style={styles.groupName}>
                     {group.name}
                   </Text>
-                  <Text
-                    style={[
-                      styles.groupTime,
-                      group.unread > 0 && styles.groupTimeUnread,
-                    ]}
-                  >
-                    {group.time}
+                  <Text style={styles.groupTime}>
+                    {group.createdAt.toLocaleDateString('fr-FR')}
                   </Text>
                 </View>
 
                 <View style={styles.messageLine}>
                   <Text numberOfLines={1} style={styles.lastMessage}>
-                    <Text style={styles.lastSender}>{group.lastSender} : </Text>
-                    {group.lastMessage}
+                    {group.description ?? 'Aucune description.'}
                   </Text>
-                  {group.unread > 0 ? (
-                    <Text style={styles.unreadBadge}>{group.unread}</Text>
-                  ) : (
-                    <Text style={styles.readMark}>✓✓</Text>
-                  )}
                 </View>
 
                 <Text style={styles.groupMeta}>
-                  {`${group.meta} · ${group.members} membres`}
+                  {group.createdBy ? 'Groupe créé par un membre' : 'Groupe'}
                 </Text>
               </View>
             </Pressable>
           ))}
         </View>
+
+        {!isLoading && groups.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Aucun groupe</Text>
+            <Text style={styles.emptyText}>
+              Créez un groupe ou demandez une invitation pour rejoindre une
+              discussion.
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.helpCard}>
           <View>
@@ -200,7 +212,7 @@ export default function GroupeScreen() {
         </View>
       </ScrollView>
 
-      <Pressable style={styles.floatingButton}>
+      <Pressable onPress={openCreateGroupe} style={styles.floatingButton}>
         <Text style={styles.floatingButtonText}>+</Text>
       </Pressable>
     </View>
@@ -336,6 +348,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLowest,
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  emptyCard: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: 12,
+    gap: 8,
+    padding: 18,
+  },
+  emptyTitle: {
+    color: colors.primary,
+    fontSize: 19,
+    fontWeight: '800',
+  },
+  emptyText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 14,
+    lineHeight: 21,
   },
   groupRow: {
     alignItems: 'center',

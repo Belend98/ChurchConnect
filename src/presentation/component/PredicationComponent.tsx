@@ -4,7 +4,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 type PredicationComponentProps = {
   accentColor?: string
+  isDeleting?: boolean
   likes?: number
+  onDelete: (predication: PredicationModel) => void
+  onEdit: (predication: PredicationModel) => void
   onListen: (predication: PredicationModel) => void
   predication: PredicationModel
 }
@@ -27,7 +30,10 @@ function formatDate(date: Date): string {
 
 export function PredicationComponent({
   accentColor = colors.primaryFixed,
+  isDeleting = false,
   likes = 0,
+  onDelete,
+  onEdit,
   onListen,
   predication,
 }: PredicationComponentProps) {
@@ -55,12 +61,29 @@ export function PredicationComponent({
       </View>
 
       <View style={styles.actions}>
-        <Pressable
-          onPress={() => onListen(predication)}
-          style={styles.listenButton}
-        >
-          <Text style={styles.listenButtonText}>Écouter</Text>
-        </Pressable>
+        <View style={styles.primaryActions}>
+          <Pressable
+            onPress={() => onListen(predication)}
+            style={styles.listenButton}
+          >
+            <Text style={styles.listenButtonText}>Écouter</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onEdit(predication)}
+            style={styles.editButton}
+          >
+            <Text style={styles.editButtonText}>Modifier</Text>
+          </Pressable>
+          <Pressable
+            disabled={isDeleting}
+            onPress={() => onDelete(predication)}
+            style={[styles.deleteButton, isDeleting && styles.disabledButton]}
+          >
+            <Text style={styles.deleteButtonText}>
+              {isDeleting ? '...' : 'Supprimer'}
+            </Text>
+          </Pressable>
+        </View>
         <View style={styles.lightActions}>
           <Text style={styles.likes}>{likes} ♥</Text>
           <Text style={styles.save}>Favori</Text>
@@ -136,9 +159,17 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   actions: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  primaryActions: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   listenButton: {
     alignItems: 'center',
@@ -152,6 +183,37 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '800',
+  },
+  editButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 12,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 14,
+  },
+  editButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  deleteButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainer,
+    borderColor: colors.error,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 14,
+  },
+  deleteButtonText: {
+    color: colors.error,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  disabledButton: {
+    opacity: 0.55,
   },
   lightActions: {
     alignItems: 'center',

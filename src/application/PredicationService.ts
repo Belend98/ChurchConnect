@@ -3,6 +3,7 @@ import type { PredicationFavoriteModel } from '@/domain/entités/PredicationEnga
 import type {
   CreatePredicationModel,
   PredicationModel,
+  UpdatePredicationModel,
 } from '@/domain/entités/Predication'
 import type { PredicationFavoriteRepository } from '@/domain/repositories/PredicationEngagement/PredicationFavoriteRepository'
 import type { PredicationLikeRepository } from '@/domain/repositories/PredicationEngagement/PredicationLikeRepository'
@@ -35,6 +36,13 @@ export class PredicationService {
     return this.predicationRepository.create(data)
   }
 
+  updatePredication(
+    id: string,
+    data: UpdatePredicationModel,
+  ): Promise<PredicationModel> {
+    return this.predicationRepository.update(id, data)
+  }
+
   async createPredicationWithAudio(
     data: CreatePredicationWithAudioInput,
   ): Promise<PredicationModel> {
@@ -45,6 +53,24 @@ export class PredicationService {
     })
 
     return this.predicationRepository.create({
+      categorieId: data.categorieId,
+      title: data.title,
+      durationSeconds: data.durationSeconds,
+      mediaUrl: uploadedAudio.publicUrl,
+    })
+  }
+
+  async updatePredicationWithAudio(
+    id: string,
+    data: CreatePredicationWithAudioInput,
+  ): Promise<PredicationModel> {
+    const uploadedAudio = await this.audioStorage.uploadAudio({
+      fileName: data.fileName,
+      contentType: data.contentType,
+      audio: data.audio,
+    })
+
+    return this.predicationRepository.update(id, {
       categorieId: data.categorieId,
       title: data.title,
       durationSeconds: data.durationSeconds,
