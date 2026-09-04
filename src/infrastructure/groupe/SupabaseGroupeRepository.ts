@@ -67,6 +67,20 @@ export class SupabaseGroupeRepository implements GroupeRepository {
     return ((data ?? []) as GroupeRow[]).map(mapGroupe)
   }
 
+  async listByIds(ids: string[]): Promise<GroupeModel[]> {
+    if (ids.length === 0) return []
+
+    const { data, error } = await supabase
+      .from('groupes')
+      .select(GROUPE_SELECT)
+      .in('id', ids)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return ((data ?? []) as GroupeRow[]).map(mapGroupe)
+  }
+
   async update(id: string, data: UpdateGroupeModel): Promise<GroupeModel> {
     const { data: groupe, error } = await supabase
       .from('groupes')
