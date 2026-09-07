@@ -1,5 +1,5 @@
 import { ProfilService } from '@/application/ProfilService'
-import { authService } from './auth'
+import { authService } from './Auth'
 import { SupabaseProfilRepository } from '@/infrastructure/profil/SupabaseProfilRepository'
 
 const profilRepository = new SupabaseProfilRepository()
