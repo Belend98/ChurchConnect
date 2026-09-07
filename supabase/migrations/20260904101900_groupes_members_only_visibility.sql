@@ -48,6 +48,7 @@ drop policy if exists "groupe_select_members_only" on public.groupe;
 drop policy if exists "groupe_insert_authenticated_creator" on public.groupe;
 drop policy if exists "groupe_update_admin_only" on public.groupe;
 drop policy if exists "groupe_delete_admin_only" on public.groupe;
+drop policy if exists "groupe_delete_creator_only" on public.groupe;
 
 create policy "groupe_select_members_only"
 on public.groupe
@@ -71,11 +72,11 @@ to authenticated
 using (public.is_group_admin(groupe_id))
 with check (public.is_group_admin(groupe_id));
 
-create policy "groupe_delete_admin_only"
+create policy "groupe_delete_creator_only"
 on public.groupe
 for delete
 to authenticated
-using (public.is_group_admin(groupe_id));
+using (public.is_group_creator(groupe_id));
 
 drop policy if exists "groupe_membre_select_group_members_only" on public.groupe_membre;
 drop policy if exists "groupe_membre_insert_admin_or_creator" on public.groupe_membre;

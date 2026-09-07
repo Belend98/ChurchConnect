@@ -36,13 +36,6 @@ export class PredicationService {
     return this.predicationRepository.create(data)
   }
 
-  updatePredication(
-    id: string,
-    data: UpdatePredicationModel,
-  ): Promise<PredicationModel> {
-    return this.predicationRepository.update(id, data)
-  }
-
   async createPredicationWithAudio(
     data: CreatePredicationWithAudioInput,
   ): Promise<PredicationModel> {
@@ -52,34 +45,68 @@ export class PredicationService {
       audio: data.audio,
     })
 
-    return this.predicationRepository.create({
-      categorieId: data.categorieId,
-      title: data.title,
-      durationSeconds: data.durationSeconds,
-      mediaUrl: uploadedAudio.publicUrl,
-    })
+    try {
+      return await this.predicationRepository.create({
+        categorieId: data.categorieId,
+        title: data.title,
+        durationSeconds: data.durationSeconds,
+        mediaUrl: uploadedAudio.publicUrl,
+      })
+    } catch (error) {
+      await this.deleteStoredAudioQuietly(uploadedAudio.publicUrl)
+      throw error
+    }
   }
 
   async updatePredicationWithAudio(
     id: string,
     data: CreatePredicationWithAudioInput,
   ): Promise<PredicationModel> {
+    const existingPredication = await this.predicationRepository.getById(id)
     const uploadedAudio = await this.audioStorage.uploadAudio({
       fileName: data.fileName,
       contentType: data.contentType,
       audio: data.audio,
     })
 
-    return this.predicationRepository.update(id, {
-      categorieId: data.categorieId,
-      title: data.title,
-      durationSeconds: data.durationSeconds,
-      mediaUrl: uploadedAudio.publicUrl,
-    })
+    try {
+      const updatedPredication = await this.predicationRepository.update(id, {
+        categorieId: data.categorieId,
+        title: data.title,
+        durationSeconds: data.durationSeconds,
+        mediaUrl: uploadedAudio.publicUrl,
+      })
+
+      if (existingPredication?.mediaUrl !== uploadedAudio.publicUrl) {
+        await this.deleteStoredAudioQuietly(existingPredication?.mediaUrl)
+      }
+
+      return updatedPredication
+    } catch (error) {
+      await this.deleteStoredAudioQuietly(uploadedAudio.publicUrl)
+      throw error
+    }
   }
 
-  deletePredication(id: string): Promise<void> {
-    return this.predicationRepository.delete(id)
+  async updatePredication(
+    id: string,
+    data: UpdatePredicationModel,
+  ): Promise<PredicationModel> {
+    const existingPredication = await this.predicationRepository.getById(id)
+    const updatedPredication = await this.predicationRepository.update(id, data)
+
+    if (existingPredication?.mediaUrl !== updatedPredication.mediaUrl) {
+      await this.deleteStoredAudioQuietly(existingPredication?.mediaUrl)
+    }
+
+    return updatedPredication
+  }
+
+  async deletePredication(id: string): Promise<void> {
+    const existingPredication = await this.predicationRepository.getById(id)
+
+    await this.predicationRepository.delete(id)
+    await this.deleteStoredAudioQuietly(existingPredication?.mediaUrl)
   }
 
   async toggleLike(predicationId: string): Promise<boolean> {
@@ -128,5 +155,19 @@ export class PredicationService {
   async listMyFavorites(): Promise<PredicationFavoriteModel[]> {
     const userId = await this.authService.getCurrentUserIdOrThrow()
     return this.favoriteRepository.listByUser(userId)
+  }
+
+  private async deleteStoredAudioQuietly(mediaUrl?: string): Promise<void> {
+    if (!mediaUrl) return
+
+    const audioPath = this.audioStorage.getPathFromPublicUrl(mediaUrl)
+
+    if (!audioPath) return
+
+    try {
+      await this.audioStorage.deleteAudio(audioPath)
+    } catch (error) {
+      console.warn(error)
+    }
   }
 }

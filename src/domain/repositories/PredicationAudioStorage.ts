@@ -12,4 +12,5 @@ export type UploadedPredicationAudio = {
 export interface PredicationAudioStorage {
   uploadAudio(input: UploadPredicationAudioInput): Promise<UploadedPredicationAudio>
   deleteAudio(path: string): Promise<void>
+  getPathFromPublicUrl(url: string): string | null
 }

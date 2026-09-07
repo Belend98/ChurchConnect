@@ -1,20 +1,11 @@
-import { groupeService } from '@/composition/groupe'
 import { predicationService } from '@/composition/predication'
-import type { GroupeModel } from '@/domain/entités/Groupe'
 import type { PredicationModel } from '@/domain/entités/Predication'
 import { colors } from '@/shared/theme/colors'
 import { useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-
-const shortcuts = [
-  { label: 'Mes groupes', color: colors.primary, backgroundColor: '#d5e3ff' },
-  { label: 'Cultes', color: colors.secondary, backgroundColor: '#ffdbcf' },
-  { label: 'Prière', color: colors.tertiary, backgroundColor: colors.tertiaryFixed },
-]
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 
 export default function HomeScreen() {
-  const [groups, setGroups] = useState<GroupeModel[]>([])
   const [predications, setPredications] = useState<PredicationModel[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -23,19 +14,15 @@ export default function HomeScreen() {
       let isMounted = true
       setIsLoading(true)
 
-      Promise.all([
-        groupeService.listGroupes(),
-        predicationService.listPredications(),
-      ])
-        .then(([groupItems, predicationItems]) => {
+      predicationService
+        .listPredications()
+        .then((predicationItems) => {
           if (!isMounted) return
-          setGroups(groupItems)
           setPredications(predicationItems)
         })
         .catch((error) => {
           if (!isMounted) return
           console.warn(error)
-          setGroups([])
           setPredications([])
         })
         .finally(() => {
@@ -66,38 +53,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <Text style={styles.intro}>
-        Bienvenue dans votre espace de fraternité, de prédication et de prière.
-      </Text>
-
-      <View style={styles.verseCard}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>Méditation du jour</Text>
-          <Text style={styles.sectionMeta}>À venir</Text>
-        </View>
-        <Text style={styles.verseText}>
-          Aucun verset enregistré pour le moment.
-        </Text>
-      </View>
-
-      <View style={styles.shortcutGrid}>
-        {shortcuts.map((shortcut) => (
-          <Pressable key={shortcut.label} style={styles.shortcut}>
-            <View
-              style={[
-                styles.shortcutIcon,
-                { backgroundColor: shortcut.backgroundColor },
-              ]}
-            >
-              <Text style={[styles.shortcutInitial, { color: shortcut.color }]}>
-                {shortcut.label.charAt(0)}
-              </Text>
-            </View>
-            <Text style={styles.shortcutLabel}>{shortcut.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-
       <View style={styles.sermonCard}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Dernière prédication</Text>
@@ -118,38 +73,6 @@ export default function HomeScreen() {
           </Text>
         )}
       </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Mes groupes</Text>
-        <Text style={styles.badge}>{groups.length}</Text>
-      </View>
-
-      <View style={styles.announcementList}>
-        {groups.map((group) => (
-          <View key={group.id} style={styles.announcementCard}>
-            <View style={styles.announcementTopLine}>
-              <Text style={styles.announcementDate}>
-                {group.createdAt.toLocaleDateString('fr-FR')}
-              </Text>
-              <Text style={styles.tag}>Membre</Text>
-            </View>
-            <Text style={styles.announcementTitle}>{group.name}</Text>
-            <Text style={styles.announcementDescription}>
-              {group.description ?? 'Aucune description.'}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      {!isLoading && groups.length === 0 ? (
-        <View style={styles.announcementCard}>
-          <Text style={styles.announcementTitle}>Aucun groupe</Text>
-          <Text style={styles.announcementDescription}>
-            Vos groupes apparaîtront ici lorsque vous en créerez ou rejoindrez
-            un.
-          </Text>
-        </View>
-      ) : null}
     </ScrollView>
   )
 }

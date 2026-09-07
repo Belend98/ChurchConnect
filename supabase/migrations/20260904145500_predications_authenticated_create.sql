@@ -35,6 +35,54 @@ for delete
 to authenticated
 using (true);
 
+alter table public.predication_likes enable row level security;
+
+drop policy if exists "predication_likes_select_authenticated" on public.predication_likes;
+drop policy if exists "predication_likes_insert_own" on public.predication_likes;
+drop policy if exists "predication_likes_delete_own" on public.predication_likes;
+
+create policy "predication_likes_select_authenticated"
+on public.predication_likes
+for select
+to authenticated
+using (true);
+
+create policy "predication_likes_insert_own"
+on public.predication_likes
+for insert
+to authenticated
+with check (user_id = auth.uid());
+
+create policy "predication_likes_delete_own"
+on public.predication_likes
+for delete
+to authenticated
+using (user_id = auth.uid());
+
+alter table public.predication_favorites enable row level security;
+
+drop policy if exists "predication_favorites_select_own" on public.predication_favorites;
+drop policy if exists "predication_favorites_insert_own" on public.predication_favorites;
+drop policy if exists "predication_favorites_delete_own" on public.predication_favorites;
+
+create policy "predication_favorites_select_own"
+on public.predication_favorites
+for select
+to authenticated
+using (user_id = auth.uid());
+
+create policy "predication_favorites_insert_own"
+on public.predication_favorites
+for insert
+to authenticated
+with check (user_id = auth.uid());
+
+create policy "predication_favorites_delete_own"
+on public.predication_favorites
+for delete
+to authenticated
+using (user_id = auth.uid());
+
 drop policy if exists "predication_audio_select_authenticated" on storage.objects;
 drop policy if exists "predication_audio_insert_authenticated" on storage.objects;
 drop policy if exists "predication_audio_update_authenticated" on storage.objects;

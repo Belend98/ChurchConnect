@@ -29,6 +29,7 @@ export class SupabasePredicationLikeRepository
       .select('id')
       .eq('predication_id', predicationId)
       .eq('user_id', userId)
+      .limit(1)
       .maybeSingle()
 
     if (error) throw error
@@ -42,15 +43,10 @@ export class SupabasePredicationLikeRepository
   ): Promise<PredicationLikeModel> {
     const { data, error } = await supabase
       .from('predication_likes')
-      .upsert(
-        {
-          predication_id: predicationId,
-          user_id: userId,
-        },
-        {
-          onConflict: 'predication_id,user_id',
-        },
-      )
+      .insert({
+        predication_id: predicationId,
+        user_id: userId,
+      })
       .select(PREDICATION_LIKE_SELECT)
       .single()
 

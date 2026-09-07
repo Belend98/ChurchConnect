@@ -16,6 +16,10 @@ export class ProfilService {
     return this.profilRepository.getProfile(userId)
   }
 
+  listProfilesByIds(ids: string[]) {
+    return this.profilRepository.listByIds(ids)
+  }
+
   async getCurrentUserProfileOrThrow() {
     const user = await this.authService.getCurrentUserOrThrow()
     const profile = await this.profilRepository.getProfile(user.id)

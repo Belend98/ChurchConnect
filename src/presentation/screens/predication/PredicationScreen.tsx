@@ -2,6 +2,7 @@ import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import {
   Alert,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -11,12 +12,16 @@ import {
   View,
 } from 'react-native'
 import { PredicationComponent } from '@/presentation/component/PredicationComponent'
+import { categorieService } from '@/composition/categorie'
 import { predicationService } from '@/composition/predication'
+import { profilService } from '@/composition/profil'
+import type { CategorieModel } from '@/domain/entités/Categorie'
 import type { PredicationModel } from '@/domain/entités/Predication'
+import { canManagePredications } from '@/domain/entités/Profil'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 
-const filters = ['Tous', 'Audio', 'Vidéo', 'Série en cours', 'Jeunesse']
+const ALL_CATEGORIES_FILTER = 'all'
 
 const accentColors = [
   colors.secondaryFixed,
@@ -26,25 +31,102 @@ const accentColors = [
 ]
 
 export default function PredicationScreen() {
+  const [categories, setCategories] = useState<CategorieModel[]>([])
+  const [categoryActionId, setCategoryActionId] = useState<string | null>(null)
+  const [categoryError, setCategoryError] = useState<string | null>(null)
   const [predications, setPredications] = useState<PredicationModel[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
+  const [editingCategoryName, setEditingCategoryName] = useState('')
+  const [favoriteById, setFavoriteById] = useState<Record<string, boolean>>({})
+  const [favoritingId, setFavoritingId] = useState<string | null>(null)
+  const [canManagePredicationItems, setCanManagePredicationItems] =
+    useState(false)
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [likedById, setLikedById] = useState<Record<string, boolean>>({})
+  const [likesById, setLikesById] = useState<Record<string, number>>({})
+  const [likingId, setLikingId] = useState<string | null>(null)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    ALL_CATEGORIES_FILTER,
+  )
+
+  const loadCategories = useCallback(async () => {
+    const items = await categorieService.listCategories()
+    setCategories(items)
+    return items
+  }, [])
 
   useFocusEffect(
     useCallback(() => {
       let isMounted = true
       setIsLoading(true)
 
-      predicationService
-        .listPredications()
-        .then((items) => {
-          if (!isMounted) return
-          setPredications(items)
-        })
+      async function loadScreen() {
+        const [items, categoryItems, profile] = await Promise.all([
+          predicationService.listPredications(),
+          categorieService.listCategories(),
+          profilService.getCurrentUserProfileOrThrow().catch(() => null),
+        ])
+
+        if (!isMounted) return
+
+        setPredications(items)
+        setCategories(categoryItems)
+        setCanManagePredicationItems(canManagePredications(profile?.roleApp))
+
+        const engagementEntries = await Promise.all(
+          items.map(async (item) => {
+            const [likes, isFavorite, isLiked] = await Promise.all([
+              predicationService.countLikes(item.id),
+              predicationService.isFavoriteByCurrentUser(item.id),
+              predicationService.isLikedByCurrentUser(item.id),
+            ])
+
+            return [item.id, { isFavorite, isLiked, likes }] as const
+          }),
+        )
+
+        if (!isMounted) return
+
+        setLikedById(
+          Object.fromEntries(
+            engagementEntries.map(([id, engagement]) => [
+              id,
+              engagement.isLiked,
+            ]),
+          ),
+        )
+        setFavoriteById(
+          Object.fromEntries(
+            engagementEntries.map(([id, engagement]) => [
+              id,
+              engagement.isFavorite,
+            ]),
+          ),
+        )
+        setLikesById(
+          Object.fromEntries(
+            engagementEntries.map(([id, engagement]) => [
+              id,
+              engagement.likes,
+            ]),
+          ),
+        )
+      }
+
+      loadScreen()
         .catch((error) => {
           if (!isMounted) return
           console.warn(error)
+          setCategories([])
           setPredications([])
+          setFavoriteById({})
+          setLikedById({})
+          setLikesById({})
+          setCanManagePredicationItems(false)
         })
         .finally(() => {
           if (isMounted) setIsLoading(false)
@@ -62,12 +144,125 @@ export default function PredicationScreen() {
         pathname: '/predication-player',
         params: {
           durationSeconds: String(predication.durationSeconds ?? ''),
+          id: predication.id,
           mediaUrl: predication.mediaUrl,
-          serie: predication.categorieId ?? 'Prédication',
+          serie: getCategoryName(predication.categorieId),
           title: predication.title,
         },
       } as never,
     )
+  }
+
+  function getCategoryName(categorieId?: string): string {
+    if (!categorieId) return 'Prédication'
+    return (
+      categories.find((categorie) => categorie.id === categorieId)?.nom ??
+      'Prédication'
+    )
+  }
+
+  async function createCategory() {
+    const trimmedName = newCategoryName.trim()
+
+    setCategoryError(null)
+
+    if (!trimmedName) {
+      setCategoryError('Le nom de la catégorie est obligatoire.')
+      return
+    }
+
+    setCategoryActionId('new')
+
+    try {
+      await categorieService.createCategorie({ nom: trimmedName })
+      await loadCategories()
+      setNewCategoryName('')
+    } catch (error) {
+      setCategoryError(
+        toErrorMessage(error, 'Impossible de créer cette catégorie.'),
+      )
+    } finally {
+      setCategoryActionId(null)
+    }
+  }
+
+  function startEditCategory(categorie: CategorieModel) {
+    setCategoryError(null)
+    setEditingCategoryId(categorie.id)
+    setEditingCategoryName(categorie.nom)
+  }
+
+  async function updateCategory(categorieId: string) {
+    const trimmedName = editingCategoryName.trim()
+
+    setCategoryError(null)
+
+    if (!trimmedName) {
+      setCategoryError('Le nom de la catégorie est obligatoire.')
+      return
+    }
+
+    setCategoryActionId(categorieId)
+
+    try {
+      await categorieService.updateCategorie(categorieId, { nom: trimmedName })
+      await loadCategories()
+      setEditingCategoryId(null)
+      setEditingCategoryName('')
+    } catch (error) {
+      setCategoryError(
+        toErrorMessage(error, 'Impossible de modifier cette catégorie.'),
+      )
+    } finally {
+      setCategoryActionId(null)
+    }
+  }
+
+  function confirmDeleteCategory(categorie: CategorieModel) {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Voulez-vous vraiment supprimer "${categorie.nom}" ?`,
+      )
+
+      if (confirmed) void deleteCategory(categorie.id)
+      return
+    }
+
+    Alert.alert(
+      'Supprimer la catégorie',
+      `Voulez-vous vraiment supprimer "${categorie.nom}" ?`,
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: () => deleteCategory(categorie.id),
+          style: 'destructive',
+          text: 'Supprimer',
+        },
+      ],
+    )
+  }
+
+  async function deleteCategory(categorieId: string) {
+    setCategoryActionId(categorieId)
+    setCategoryError(null)
+
+    try {
+      await categorieService.deleteCategorie(categorieId)
+      await loadCategories()
+
+      if (selectedCategoryId === categorieId) {
+        setSelectedCategoryId(ALL_CATEGORIES_FILTER)
+      }
+    } catch (error) {
+      setCategoryError(
+        toErrorMessage(
+          error,
+          'Impossible de supprimer cette catégorie. Elle est peut-être utilisée.',
+        ),
+      )
+    } finally {
+      setCategoryActionId(null)
+    }
   }
 
   function openUpdate(predication: PredicationModel) {
@@ -128,6 +323,100 @@ export default function PredicationScreen() {
     }
   }
 
+  async function toggleLike(predication: PredicationModel) {
+    if (likingId) return
+
+    const wasLiked = Boolean(likedById[predication.id])
+
+    setLikingId(predication.id)
+    setLikedById((current) => ({
+      ...current,
+      [predication.id]: !wasLiked,
+    }))
+    setLikesById((current) => ({
+      ...current,
+      [predication.id]: Math.max(0, (current[predication.id] ?? 0) + (wasLiked ? -1 : 1)),
+    }))
+
+    try {
+      const isLiked = await predicationService.toggleLike(predication.id)
+      const likes = await predicationService.countLikes(predication.id)
+
+      setLikedById((current) => ({
+        ...current,
+        [predication.id]: isLiked,
+      }))
+      setLikesById((current) => ({
+        ...current,
+        [predication.id]: likes,
+      }))
+    } catch (error) {
+      console.warn(error)
+      setLikedById((current) => ({
+        ...current,
+        [predication.id]: wasLiked,
+      }))
+      setLikesById((current) => ({
+        ...current,
+        [predication.id]: Math.max(0, (current[predication.id] ?? 0) + (wasLiked ? 1 : -1)),
+      }))
+      Alert.alert(
+        'Like impossible',
+        toErrorMessage(error, "Une erreur est survenue pendant le like."),
+      )
+    } finally {
+      setLikingId(null)
+    }
+  }
+
+  async function toggleFavorite(predication: PredicationModel) {
+    if (favoritingId) return
+
+    const wasFavorite = Boolean(favoriteById[predication.id])
+
+    setFavoritingId(predication.id)
+    setFavoriteById((current) => ({
+      ...current,
+      [predication.id]: !wasFavorite,
+    }))
+
+    try {
+      const isFavorite = await predicationService.toggleFavorite(predication.id)
+
+      setFavoriteById((current) => ({
+        ...current,
+        [predication.id]: isFavorite,
+      }))
+    } catch (error) {
+      console.warn(error)
+      setFavoriteById((current) => ({
+        ...current,
+        [predication.id]: wasFavorite,
+      }))
+      Alert.alert(
+        'Favori impossible',
+        toErrorMessage(error, "Une erreur est survenue pendant l'ajout favori."),
+      )
+    } finally {
+      setFavoritingId(null)
+    }
+  }
+
+  const normalizedSearch = searchQuery.trim().toLowerCase()
+  const filteredPredications = predications.filter((predication) => {
+    const categoryName = getCategoryName(predication.categorieId)
+    const matchesCategory =
+      selectedCategoryId === ALL_CATEGORIES_FILTER ||
+      predication.categorieId === selectedCategoryId
+    const matchesSearch =
+      !normalizedSearch ||
+      predication.title.toLowerCase().includes(normalizedSearch) ||
+      categoryName.toLowerCase().includes(normalizedSearch)
+
+    return matchesCategory && matchesSearch
+  })
+  const firstPredication = filteredPredications[0]
+
   return (
     <ScrollView
       contentContainerStyle={styles.content}
@@ -139,13 +428,24 @@ export default function PredicationScreen() {
           <Text style={styles.eyebrow}>Ressources spirituelles</Text>
           <Text style={styles.title}>Prédications</Text>
         </View>
-        <Pressable
-          onPress={() => router.push('/create-predication' as never)}
-          style={styles.sortButton}
-        >
-          <Text style={styles.sortButtonText}>Créer</Text>
-        </Pressable>
+        {canManagePredicationItems ? (
+          <Pressable
+            onPress={() => router.push('/create-predication' as never)}
+            style={styles.sortButton}
+          >
+            <Text style={styles.sortButtonText}>Créer</Text>
+          </Pressable>
+        ) : null}
       </View>
+
+      {canManagePredicationItems ? (
+        <Pressable
+          onPress={() => setIsCategoryModalOpen(true)}
+          style={styles.manageButton}
+        >
+          <Text style={styles.manageButtonText}>Catégories</Text>
+        </Pressable>
+      ) : null}
 
       <Text style={styles.intro}>
         Retrouvez les messages à écouter, méditer ou garder pour plus tard.
@@ -154,9 +454,11 @@ export default function PredicationScreen() {
       <View style={styles.searchBox}>
         <Text style={styles.searchIcon}>⌕</Text>
         <TextInput
-          placeholder="Rechercher un thème, pasteur, verset..."
+          onChangeText={setSearchQuery}
+          placeholder="Rechercher par titre ou catégorie..."
           placeholderTextColor={colors.outline}
           style={styles.searchInput}
+          value={searchQuery}
         />
       </View>
 
@@ -165,33 +467,37 @@ export default function PredicationScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
       >
-        {filters.map((filter, index) => (
+        {[{ id: ALL_CATEGORIES_FILTER, nom: 'Tous' }, ...categories].map((filter) => (
           <Pressable
-            key={filter}
-            style={[styles.filterPill, index === 0 && styles.filterPillActive]}
+            key={filter.id}
+            onPress={() => setSelectedCategoryId(filter.id)}
+            style={[
+              styles.filterPill,
+              selectedCategoryId === filter.id && styles.filterPillActive,
+            ]}
           >
             <Text
               style={[
                 styles.filterText,
-                index === 0 && styles.filterTextActive,
+                selectedCategoryId === filter.id && styles.filterTextActive,
               ]}
             >
-              {filter}
+              {filter.nom}
             </Text>
           </Pressable>
         ))}
       </ScrollView>
 
-      {predications[0] ? (
+      {firstPredication ? (
         <Pressable
-          onPress={() => openPlayer(predications[0])}
+          onPress={() => openPlayer(firstPredication)}
           style={styles.resumeCard}
         >
           <View>
             <Text style={styles.resumeLabel}>Dernière prédication</Text>
-            <Text style={styles.resumeTitle}>{predications[0].title}</Text>
+            <Text style={styles.resumeTitle}>{firstPredication.title}</Text>
             <Text style={styles.resumeMeta}>
-              {predications[0].categorieId ?? 'Prédication'}
+              {getCategoryName(firstPredication.categorieId)}
             </Text>
           </View>
           <View style={styles.resumeButton}>
@@ -203,32 +509,148 @@ export default function PredicationScreen() {
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Toutes les prédications</Text>
         <Text style={styles.sectionMeta}>
-          {isLoading ? 'Chargement' : `${predications.length} messages`}
+          {isLoading ? 'Chargement' : `${filteredPredications.length} messages`}
         </Text>
       </View>
 
       <View style={styles.sermonList}>
-        {predications.map((predication, index) => (
+        {filteredPredications.map((predication, index) => (
           <PredicationComponent
             accentColor={accentColors[index % accentColors.length]}
+            canManagePredication={canManagePredicationItems}
+            categoryName={getCategoryName(predication.categorieId)}
             isDeleting={deletingId === predication.id}
+            isFavorite={Boolean(favoriteById[predication.id])}
+            isFavoriting={favoritingId === predication.id}
+            isLiked={Boolean(likedById[predication.id])}
+            isLiking={likingId === predication.id}
             key={predication.id}
+            likes={likesById[predication.id] ?? 0}
             onDelete={confirmDelete}
             onEdit={openUpdate}
             onListen={openPlayer}
+            onToggleFavorite={toggleFavorite}
+            onToggleLike={toggleLike}
             predication={predication}
           />
         ))}
       </View>
 
-      {!isLoading && predications.length === 0 ? (
+      {!isLoading && filteredPredications.length === 0 ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>Aucune prédication</Text>
           <Text style={styles.emptyText}>
-            Créez une prédication pour la voir apparaître ici.
+            Aucune prédication ne correspond à ce filtre.
           </Text>
         </View>
       ) : null}
+
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setIsCategoryModalOpen(false)}
+        transparent
+        visible={isCategoryModalOpen}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Catégories</Text>
+              <Pressable onPress={() => setIsCategoryModalOpen(false)}>
+                <Text style={styles.modalClose}>Fermer</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.categoryCreateRow}>
+              <TextInput
+                onChangeText={setNewCategoryName}
+                placeholder="Nouvelle catégorie"
+                placeholderTextColor={colors.outline}
+                style={styles.categoryInput}
+                value={newCategoryName}
+              />
+              <Pressable
+                disabled={categoryActionId === 'new'}
+                onPress={createCategory}
+                style={[
+                  styles.smallActionButton,
+                  categoryActionId === 'new' && styles.disabledButton,
+                ]}
+              >
+                <Text style={styles.smallActionButtonText}>Ajouter</Text>
+              </Pressable>
+            </View>
+
+            {categoryError ? (
+              <Text style={styles.errorText}>{categoryError}</Text>
+            ) : null}
+
+            <ScrollView
+              contentContainerStyle={styles.categoryList}
+              showsVerticalScrollIndicator={false}
+            >
+              {categories.map((categorie) => {
+                const isEditing = editingCategoryId === categorie.id
+                const isBusy = categoryActionId === categorie.id
+
+                return (
+                  <View key={categorie.id} style={styles.categoryRow}>
+                    {isEditing ? (
+                      <TextInput
+                        autoFocus
+                        onChangeText={setEditingCategoryName}
+                        placeholder="Nom"
+                        placeholderTextColor={colors.outline}
+                        style={styles.categoryInput}
+                        value={editingCategoryName}
+                      />
+                    ) : (
+                      <Text numberOfLines={1} style={styles.categoryName}>
+                        {categorie.nom}
+                      </Text>
+                    )}
+
+                    {isEditing ? (
+                      <Pressable
+                        disabled={isBusy}
+                        onPress={() => updateCategory(categorie.id)}
+                        style={[
+                          styles.iconActionButton,
+                          isBusy && styles.disabledButton,
+                        ]}
+                      >
+                        <Text style={styles.iconActionText}>✓</Text>
+                      </Pressable>
+                    ) : (
+                      <Pressable
+                        disabled={isBusy}
+                        onPress={() => startEditCategory(categorie)}
+                        style={styles.iconActionButton}
+                      >
+                        <Text style={styles.iconActionText}>✎</Text>
+                      </Pressable>
+                    )}
+
+                    <Pressable
+                      disabled={isBusy}
+                      onPress={() => confirmDeleteCategory(categorie)}
+                      style={[
+                        styles.iconDangerButton,
+                        isBusy && styles.disabledButton,
+                      ]}
+                    >
+                      <Text style={styles.iconDangerText}>×</Text>
+                    </Pressable>
+                  </View>
+                )
+              })}
+
+              {categories.length === 0 ? (
+                <Text style={styles.modalText}>Aucune catégorie pour le moment.</Text>
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
@@ -271,6 +693,18 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 12,
     fontWeight: '800',
+  },
+  manageButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primaryFixed,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  manageButtonText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '900',
   },
   intro: {
     color: colors.onSurfaceVariant,
@@ -392,5 +826,126 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     fontSize: 14,
     lineHeight: 21,
+  },
+  modalOverlay: {
+    backgroundColor: 'rgba(3, 31, 65, 0.42)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    gap: 14,
+    maxHeight: '86%',
+    padding: 18,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalTitle: {
+    color: colors.primary,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  modalClose: {
+    color: colors.secondary,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  modalText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  categoryCreateRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  categoryInput: {
+    backgroundColor: colors.surfaceContainer,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 12,
+    borderWidth: 1,
+    color: colors.onSurface,
+    flex: 1,
+    fontSize: 15,
+    minHeight: 46,
+    paddingHorizontal: 12,
+  },
+  smallActionButton: {
+    alignItems: 'center',
+    backgroundColor: colors.primaryContainer,
+    borderRadius: 12,
+    height: 46,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  smallActionButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  categoryList: {
+    gap: 10,
+    paddingBottom: 6,
+  },
+  categoryRow: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainer,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    padding: 10,
+  },
+  categoryName: {
+    color: colors.onSurface,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  iconActionButton: {
+    alignItems: 'center',
+    backgroundColor: colors.primaryFixed,
+    borderRadius: 18,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  iconActionText: {
+    color: colors.primary,
+    fontSize: 17,
+    fontWeight: '900',
+    lineHeight: 20,
+  },
+  iconDangerButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLowest,
+    borderColor: colors.error,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  iconDangerText: {
+    color: colors.error,
+    fontSize: 24,
+    fontWeight: '800',
+    lineHeight: 26,
+  },
+  disabledButton: {
+    opacity: 0.55,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
   },
 })

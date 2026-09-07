@@ -47,6 +47,19 @@ export class SupabasePredicRepository implements PredicationRepository {
     return mapPredication(predication as PredicationRow)
   }
 
+  async getById(id: string): Promise<PredicationModel | null> {
+    const { data, error } = await supabase
+      .from('predication')
+      .select(PREDICATION_SELECT)
+      .eq('predication_id', id)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return null
+
+    return mapPredication(data as PredicationRow)
+  }
+
   async list(): Promise<PredicationModel[]> {
     const { data, error } = await supabase
       .from('predication')

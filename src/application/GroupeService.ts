@@ -11,11 +11,13 @@ import type {
 } from '@/domain/entités/GroupeMember'
 import type { GroupeMembreRepository } from '@/domain/repositories/GroupeMembreRepository'
 import type { GroupeRepository } from '@/domain/repositories/GroupeRepository'
+import type { ProfilRepository } from '@/domain/repositories/ProfilRepository'
 
 export class GroupeService {
   constructor(
     private readonly groupeRepository: GroupeRepository,
     private readonly groupeMembreRepository: GroupeMembreRepository,
+    private readonly profilRepository: ProfilRepository,
     private readonly authService: AuthService,
   ) {}
 
@@ -63,15 +65,42 @@ export class GroupeService {
   }
 
   async deleteGroupe(id: string): Promise<void> {
-    await this.ensureCurrentUserIsGroupAdmin(id)
+    await this.ensureCurrentUserIsGroupCreator(id)
 
-    return this.groupeRepository.delete(id)
+    await this.groupeMembreRepository.deleteByGroupe(id)
+    await this.groupeRepository.delete(id)
   }
 
   async addMembre(data: CreateGroupeMembreModel): Promise<GroupeMembreModel> {
     await this.ensureCurrentUserIsGroupAdmin(data.groupeId)
 
     return this.groupeMembreRepository.create(data)
+  }
+
+  async addMembreByUsername(
+    groupeId: string,
+    username: string,
+  ): Promise<GroupeMembreModel> {
+    await this.ensureCurrentUserIsGroupAdmin(groupeId)
+
+    const profile = await this.profilRepository.findByUsername(username.trim())
+
+    if (!profile) throw new Error('Utilisateur introuvable.')
+
+    const membres = await this.groupeMembreRepository.listByGroupe(groupeId)
+    const isAlreadyMember = membres.some(
+      (membre) => membre.userId === profile.id,
+    )
+
+    if (isAlreadyMember) {
+      throw new Error('Cet utilisateur est déjà membre du groupe.')
+    }
+
+    return this.groupeMembreRepository.create({
+      groupeId,
+      userId: profile.id,
+      isGroupAdmin: false,
+    })
   }
 
   async joinGroupe(_groupeId: string): Promise<GroupeMembreModel> {
@@ -149,5 +178,15 @@ export class GroupeService {
     )
 
     if (!isAdmin) throw new Error("Vous n'êtes pas administrateur de ce groupe.")
+  }
+
+  private async ensureCurrentUserIsGroupCreator(groupeId: string): Promise<void> {
+    const userId = await this.authService.getCurrentUserIdOrThrow()
+    const groupe = await this.groupeRepository.getById(groupeId)
+
+    if (!groupe) throw new Error('Groupe introuvable.')
+    if (groupe.createdBy !== userId) {
+      throw new Error('Seul le créateur du groupe peut le supprimer.')
+    }
   }
 }

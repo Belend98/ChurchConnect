@@ -34,6 +34,15 @@ export class SupabaseCategorieRepository implements CategorieRepository {
     return mapCategorie(categorie as CategorieRow)
   }
 
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('categorie_predication')
+      .delete()
+      .eq('categorie_id', id)
+
+    if (error) throw error
+  }
+
   async list(): Promise<CategorieModel[]> {
     const { data, error } = await supabase
       .from('categorie_predication')
@@ -43,5 +52,23 @@ export class SupabaseCategorieRepository implements CategorieRepository {
     if (error) throw error
 
     return ((data ?? []) as CategorieRow[]).map(mapCategorie)
+  }
+
+  async update(
+    id: string,
+    data: CreateCategorieModel,
+  ): Promise<CategorieModel> {
+    const { data: categorie, error } = await supabase
+      .from('categorie_predication')
+      .update({
+        name: data.nom,
+      })
+      .eq('categorie_id', id)
+      .select(CATEGORIE_SELECT)
+      .single()
+
+    if (error) throw error
+
+    return mapCategorie(categorie as CategorieRow)
   }
 }

@@ -1,9 +1,12 @@
 import { colors } from '@/shared/theme/colors'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   type DimensionValue,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,9 +15,10 @@ import {
 } from 'react-native'
 
 const speeds = [1, 1.25, 1.5, 0.75]
+const RESUME_THRESHOLD_SECONDS = 10
 
 function formatTime(seconds?: number | null): string {
-  if (!seconds || seconds < 0) return '0:00'
+  if (!seconds || seconds < 0 || !Number.isFinite(seconds)) return '0:00'
 
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = Math.floor(seconds % 60)
@@ -22,8 +26,15 @@ function formatTime(seconds?: number | null): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
+function getFinitePositiveNumber(value: number | string | undefined): number {
+  const numberValue = Number(value)
+
+  return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : 0
+}
+
 export default function PredicationPlayerScreen() {
   const params = useLocalSearchParams<{
+    id?: string
     title?: string
     mediaUrl?: string
     speaker?: string
@@ -34,21 +45,88 @@ export default function PredicationPlayerScreen() {
   const [speedIndex, setSpeedIndex] = useState(0)
   const [isFavorite, setIsFavorite] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
+  const [hasRestoredProgress, setHasRestoredProgress] = useState(false)
+  const [progressTrackWidth, setProgressTrackWidth] = useState(0)
 
   const audioSource = useMemo(() => params.mediaUrl ?? null, [params.mediaUrl])
-  const player = useAudioPlayer(audioSource, { updateInterval: 500 })
+  const player = useAudioPlayer(audioSource, {
+    keepAudioSessionActive: true,
+    preferredForwardBufferDuration: 20,
+    updateInterval: 500,
+  })
   const status = useAudioPlayerStatus(player)
 
   const title = params.title ?? 'Prédication'
   const speaker = params.speaker
   const reference = params.reference
   const serie = params.serie ?? 'Prédication'
+  const currentTime = getFinitePositiveNumber(status.currentTime)
   const duration =
-    status.duration || Number(params.durationSeconds) || status.currentTime
-  const progress = duration > 0 ? status.currentTime / duration : 0
+    getFinitePositiveNumber(status.duration) ||
+    getFinitePositiveNumber(params.durationSeconds)
+  const progress = duration > 0 ? currentTime / duration : 0
+  const remainingSeconds = Math.max(duration - currentTime, 0)
   const progressWidth = `${
     Math.min(Math.max(progress, 0), 1) * 100
   }%` as DimensionValue
+  const resumeStorageKey = `predication-progress:${params.id ?? params.mediaUrl ?? title}`
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function restoreProgress() {
+      if (!status.isLoaded || hasRestoredProgress) return
+
+      const savedProgress = await AsyncStorage.getItem(resumeStorageKey)
+      const savedTime = savedProgress ? Number(savedProgress) : 0
+
+      if (
+        isMounted &&
+        Number.isFinite(savedTime) &&
+        savedTime >= RESUME_THRESHOLD_SECONDS &&
+        duration > 0 &&
+        savedTime < duration - RESUME_THRESHOLD_SECONDS
+      ) {
+        await player.seekTo(savedTime)
+      }
+
+      if (isMounted) setHasRestoredProgress(true)
+    }
+
+    restoreProgress().catch(console.warn)
+
+    return () => {
+      isMounted = false
+    }
+  }, [
+    duration,
+    hasRestoredProgress,
+    player,
+    resumeStorageKey,
+    status.isLoaded,
+  ])
+
+  useEffect(() => {
+    if (!status.isLoaded || !hasRestoredProgress) return
+
+    if (status.didJustFinish) {
+      AsyncStorage.removeItem(resumeStorageKey).catch(console.warn)
+      return
+    }
+
+    if (currentTime >= RESUME_THRESHOLD_SECONDS) {
+      AsyncStorage.setItem(
+        resumeStorageKey,
+        String(Math.floor(currentTime)),
+      ).catch(console.warn)
+    }
+  }, [
+    currentTime,
+    hasRestoredProgress,
+    resumeStorageKey,
+    status.didJustFinish,
+    status.isLoaded,
+  ])
 
   function togglePlayback() {
     if (!params.mediaUrl) return
@@ -62,12 +140,31 @@ export default function PredicationPlayerScreen() {
   }
 
   async function seekBy(seconds: number) {
+    if (duration <= 0) return
+
     const nextTime = Math.min(
-      Math.max((status.currentTime ?? 0) + seconds, 0),
+      Math.max(currentTime + seconds, 0),
       duration,
     )
 
+    if (!Number.isFinite(nextTime)) return
+
     await player.seekTo(nextTime)
+  }
+
+  async function seekFromProgressPress(event: GestureResponderEvent) {
+    if (!duration || progressTrackWidth <= 0) return
+
+    const positionRatio = event.nativeEvent.locationX / progressTrackWidth
+    const nextTime = Math.min(Math.max(positionRatio, 0), 1) * duration
+
+    if (!Number.isFinite(nextTime)) return
+
+    await player.seekTo(nextTime)
+  }
+
+  function updateProgressTrackWidth(event: LayoutChangeEvent) {
+    setProgressTrackWidth(event.nativeEvent.layout.width)
   }
 
   function cycleSpeed() {
@@ -101,6 +198,11 @@ export default function PredicationPlayerScreen() {
             {[speaker, reference].filter(Boolean).join(' · ')}
           </Text>
         ) : null}
+        {status.error ? (
+          <Text style={styles.playerNotice}>
+            Lecture impossible : {status.error}
+          </Text>
+        ) : null}
         {!params.mediaUrl ? (
           <Text style={styles.playerNotice}>Aucun fichier audio disponible</Text>
         ) : null}
@@ -113,14 +215,20 @@ export default function PredicationPlayerScreen() {
         </View>
 
         <View style={styles.progressArea}>
-          <View style={styles.progressTrack}>
+          <Pressable
+            onLayout={updateProgressTrackWidth}
+            onPress={seekFromProgressPress}
+            style={styles.progressTrack}
+          >
             <View style={[styles.progressFill, { width: progressWidth }]} />
-          </View>
+          </Pressable>
           <View style={styles.timeLine}>
             <Text style={styles.currentTime}>
-              {formatTime(status.currentTime)}
+              {formatTime(currentTime)}
             </Text>
-            <Text style={styles.episode}>{serie}</Text>
+            <Text style={styles.episode}>
+              -{formatTime(remainingSeconds)}
+            </Text>
             <Text style={styles.totalTime}>{formatTime(duration)}</Text>
           </View>
         </View>
@@ -141,7 +249,9 @@ export default function PredicationPlayerScreen() {
             <Text style={styles.roundControlText}>+15</Text>
           </Pressable>
           <Pressable style={styles.smallControl}>
-            <Text style={styles.smallControlText}>Repère</Text>
+            <Text style={styles.smallControlText}>
+              {hasRestoredProgress ? 'Reprise' : '...'}
+            </Text>
           </Pressable>
         </View>
 

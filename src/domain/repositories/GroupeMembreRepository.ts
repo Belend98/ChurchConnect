@@ -11,5 +11,6 @@ export interface GroupeMembreRepository {
   listByUser(userId: string): Promise<GroupeMembreModel[]>
   update(id: string, data: UpdateGroupeMembreModel): Promise<GroupeMembreModel>
   delete(id: string): Promise<void>
+  deleteByGroupe(groupeId: string): Promise<void>
   deleteByGroupeAndUser(groupeId: string, userId: string): Promise<void>
 }

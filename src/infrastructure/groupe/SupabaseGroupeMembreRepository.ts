@@ -112,6 +112,15 @@ export class SupabaseGroupeMembreRepository
     if (error) throw error
   }
 
+  async deleteByGroupe(groupeId: string): Promise<void> {
+    const { error } = await supabase
+      .from('groupe_membre')
+      .delete()
+      .eq('groupe_id', groupeId)
+
+    if (error) throw error
+  }
+
   async deleteByGroupeAndUser(
     groupeId: string,
     userId: string,

@@ -31,6 +31,7 @@ export class SupabasePredicationFavoriteRepository
       .select('id')
       .eq('predication_id', predicationId)
       .eq('user_id', userId)
+      .limit(1)
       .maybeSingle()
 
     if (error) throw error
@@ -44,15 +45,10 @@ export class SupabasePredicationFavoriteRepository
   ): Promise<PredicationFavoriteModel> {
     const { data, error } = await supabase
       .from('predication_favorites')
-      .upsert(
-        {
-          predication_id: predicationId,
-          user_id: userId,
-        },
-        {
-          onConflict: 'predication_id,user_id',
-        },
-      )
+      .insert({
+        predication_id: predicationId,
+        user_id: userId,
+      })
       .select(PREDICATION_FAVORITE_SELECT)
       .single()
 

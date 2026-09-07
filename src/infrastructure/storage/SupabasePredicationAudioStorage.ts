@@ -8,6 +8,7 @@ import { supabase } from '@/infrastructure/supabase/client'
 const PREDICATION_AUDIO_BUCKET =
   process.env.EXPO_PUBLIC_SUPABASE_PREDICATION_AUDIO_BUCKET ??
   'predications-audio'
+const PUBLIC_STORAGE_PATH = `/storage/v1/object/public/${PREDICATION_AUDIO_BUCKET}/`
 
 function sanitizeFileName(fileName: string): string {
   return fileName
@@ -57,5 +58,22 @@ export class SupabasePredicationAudioStorage
       .remove([path])
 
     if (error) throw error
+  }
+
+  getPathFromPublicUrl(url: string): string | null {
+    try {
+      const parsedUrl = new URL(url)
+      const storagePathIndex = parsedUrl.pathname.indexOf(PUBLIC_STORAGE_PATH)
+
+      if (storagePathIndex === -1) return null
+
+      const path = parsedUrl.pathname.slice(
+        storagePathIndex + PUBLIC_STORAGE_PATH.length,
+      )
+
+      return decodeURIComponent(path)
+    } catch {
+      return null
+    }
   }
 }

@@ -4,10 +4,11 @@ import {
   type CreatePredicationInput,
 } from '@/domain/rules/predicationSchema'
 import { PredicationCategoryPicker } from '@/presentation/component/PredicationCategoryPicker'
+import { useAudioFilePicker } from '@/presentation/hooks/predication/useAudioFilePicker'
+import { useRequirePredicationManager } from '@/presentation/hooks/predication/useRequirePredicationManager'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as DocumentPicker from 'expo-document-picker'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
@@ -21,18 +22,20 @@ import {
   View,
 } from 'react-native'
 
-type SelectedAudioFile = {
-  contentType: string
-  fileName: string
-  size?: number
-  uri: string
-}
+const ACCESS_DENIED_MESSAGE =
+  'Seuls les pasteurs et administrateurs peuvent créer une prédication.'
 
 export default function CreatePredicationScreen() {
   const [errorText, setErrorText] = useState<string | null>(null)
-  const [selectedAudio, setSelectedAudio] = useState<SelectedAudioFile | null>(
-    null,
-  )
+  const {
+    audioPickerError,
+    clearAudioPickerError,
+    pickAudioFile,
+    selectedAudio,
+  } = useAudioFilePicker()
+  const { canAccessScreen, isCheckingAccess } = useRequirePredicationManager({
+    deniedMessage: ACCESS_DENIED_MESSAGE,
+  })
   const {
     control,
     handleSubmit,
@@ -47,35 +50,23 @@ export default function CreatePredicationScreen() {
     },
   })
 
-  async function pickAudioFile() {
+  async function handlePickAudioFile() {
+    if (!canAccessScreen) return
+
     setErrorText(null)
-
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        copyToCacheDirectory: true,
-        multiple: false,
-        type: 'audio/*',
-      })
-
-      if (result.canceled) return
-
-      const file = result.assets[0]
-
-      setSelectedAudio({
-        contentType: file.mimeType ?? 'audio/mpeg',
-        fileName: file.name,
-        size: file.size,
-        uri: file.uri,
-      })
-    } catch (error) {
-      setErrorText(toErrorMessage(error))
-    }
+    await pickAudioFile()
   }
 
   async function onSubmit(data: CreatePredicationInput) {
     setErrorText(null)
+    clearAudioPickerError()
 
     try {
+      if (!canAccessScreen) {
+        setErrorText(ACCESS_DENIED_MESSAGE)
+        return
+      }
+
       if (!selectedAudio && !data.mediaUrl?.trim()) {
         setErrorText('Choisis un fichier audio ou entre une URL audio.')
         return
@@ -111,6 +102,34 @@ export default function CreatePredicationScreen() {
     } catch (error) {
       setErrorText(toErrorMessage(error))
     }
+  }
+
+  if (isCheckingAccess || !canAccessScreen) {
+    return (
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        style={styles.screen}
+      >
+        <View style={styles.topBar}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>‹</Text>
+            <Text style={styles.backLabel}>Prédications</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.accessCard}>
+          <Text style={styles.accessTitle}>
+            {isCheckingAccess ? 'Vérification des droits' : 'Accès refusé'}
+          </Text>
+          <Text style={styles.accessText}>
+            {isCheckingAccess
+              ? 'Un instant, nous vérifions ton statut.'
+              : ACCESS_DENIED_MESSAGE}
+          </Text>
+        </View>
+      </ScrollView>
+    )
   }
 
   return (
@@ -170,7 +189,7 @@ export default function CreatePredicationScreen() {
                 : 'MP3, M4A, WAV ou autre fichier audio'}
             </Text>
           </View>
-          <Pressable onPress={pickAudioFile} style={styles.fileButton}>
+          <Pressable onPress={handlePickAudioFile} style={styles.fileButton}>
             <Text style={styles.fileButtonText}>Choisir</Text>
           </Pressable>
         </View>
@@ -232,7 +251,9 @@ export default function CreatePredicationScreen() {
           )}
         />
 
-        {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+        {errorText || audioPickerError ? (
+          <Text style={styles.errorText}>{errorText ?? audioPickerError}</Text>
+        ) : null}
 
         <Pressable
           disabled={isSubmitting}
@@ -384,5 +405,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
+  },
+  accessCard: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: 12,
+    gap: 8,
+    padding: 18,
+  },
+  accessTitle: {
+    color: colors.primary,
+    fontSize: 19,
+    fontWeight: '900',
+  },
+  accessText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 14,
+    lineHeight: 21,
   },
 })

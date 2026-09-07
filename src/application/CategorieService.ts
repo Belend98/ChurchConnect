@@ -13,7 +13,20 @@ export class CategorieService {
     })
   }
 
+  deleteCategorie(id: string): Promise<void> {
+    return this.categorieRepository.delete(id)
+  }
+
   listCategories(): Promise<CategorieModel[]> {
     return this.categorieRepository.list()
+  }
+
+  updateCategorie(
+    id: string,
+    data: CreateCategorieModel,
+  ): Promise<CategorieModel> {
+    return this.categorieRepository.update(id, {
+      nom: data.nom.trim(),
+    })
   }
 }

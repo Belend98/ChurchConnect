@@ -4,11 +4,19 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 type PredicationComponentProps = {
   accentColor?: string
+  canManagePredication?: boolean
+  categoryName?: string
   isDeleting?: boolean
+  isFavorite?: boolean
+  isFavoriting?: boolean
+  isLiked?: boolean
+  isLiking?: boolean
   likes?: number
   onDelete: (predication: PredicationModel) => void
   onEdit: (predication: PredicationModel) => void
   onListen: (predication: PredicationModel) => void
+  onToggleFavorite: (predication: PredicationModel) => void
+  onToggleLike: (predication: PredicationModel) => void
   predication: PredicationModel
 }
 
@@ -30,11 +38,19 @@ function formatDate(date: Date): string {
 
 export function PredicationComponent({
   accentColor = colors.primaryFixed,
+  canManagePredication = false,
+  categoryName,
   isDeleting = false,
+  isFavorite = false,
+  isFavoriting = false,
+  isLiked = false,
+  isLiking = false,
   likes = 0,
   onDelete,
   onEdit,
   onListen,
+  onToggleFavorite,
+  onToggleLike,
   predication,
 }: PredicationComponentProps) {
   return (
@@ -49,7 +65,7 @@ export function PredicationComponent({
         <View style={styles.info}>
           <View style={styles.metaLine}>
             <Text style={styles.serie}>
-              {predication.categorieId ?? 'Prédication'}
+              {categoryName ?? 'Prédication'}
             </Text>
             <Text style={styles.date}>{formatDate(predication.createdAt)}</Text>
           </View>
@@ -68,25 +84,56 @@ export function PredicationComponent({
           >
             <Text style={styles.listenButtonText}>Écouter</Text>
           </Pressable>
-          <Pressable
-            onPress={() => onEdit(predication)}
-            style={styles.editButton}
-          >
-            <Text style={styles.editButtonText}>Modifier</Text>
-          </Pressable>
-          <Pressable
-            disabled={isDeleting}
-            onPress={() => onDelete(predication)}
-            style={[styles.deleteButton, isDeleting && styles.disabledButton]}
-          >
-            <Text style={styles.deleteButtonText}>
-              {isDeleting ? '...' : 'Supprimer'}
-            </Text>
-          </Pressable>
+          {canManagePredication ? (
+            <>
+              <Pressable
+                onPress={() => onEdit(predication)}
+                style={styles.editButton}
+              >
+                <Text style={styles.editButtonText}>Modifier</Text>
+              </Pressable>
+              <Pressable
+                disabled={isDeleting}
+                onPress={() => onDelete(predication)}
+                style={[
+                  styles.deleteButton,
+                  isDeleting && styles.disabledButton,
+                ]}
+              >
+                <Text style={styles.deleteButtonText}>
+                  {isDeleting ? '...' : 'Supprimer'}
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
         </View>
         <View style={styles.lightActions}>
-          <Text style={styles.likes}>{likes} ♥</Text>
-          <Text style={styles.save}>Favori</Text>
+          <Pressable
+            disabled={isLiking}
+            onPress={() => onToggleLike(predication)}
+            style={[styles.likeButton, isLiked && styles.likeButtonActive]}
+          >
+            <Text style={[styles.likes, isLiked && styles.likesActive]}>
+              {likes} ♥
+            </Text>
+          </Pressable>
+          <Pressable
+            disabled={isFavoriting}
+            onPress={() => onToggleFavorite(predication)}
+            style={[
+              styles.favoriteButton,
+              isFavorite && styles.favoriteButtonActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.favoriteButtonText,
+                isFavorite && styles.favoriteButtonTextActive,
+              ]}
+            >
+              {isFavorite ? 'Favori ✓' : 'Favori'}
+            </Text>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -220,14 +267,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  likeButton: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  likeButtonActive: {
+    backgroundColor: colors.secondaryFixed,
+  },
   likes: {
     color: colors.secondary,
     fontSize: 13,
     fontWeight: '800',
   },
-  save: {
+  likesActive: {
+    color: colors.secondary,
+  },
+  favoriteButton: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  favoriteButtonActive: {
+    backgroundColor: colors.primaryFixed,
+  },
+  favoriteButtonText: {
     color: colors.primary,
     fontSize: 13,
     fontWeight: '800',
+  },
+  favoriteButtonTextActive: {
+    color: colors.primary,
   },
 })
