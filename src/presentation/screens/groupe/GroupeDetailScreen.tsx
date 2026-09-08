@@ -1,7 +1,15 @@
-import { authService } from '@/composition/auth'
+import { authService } from '@/composition/Auth'
 import { groupeService } from '@/composition/groupe'
 import { profilService } from '@/composition/profil'
-import type { GroupeModel } from '@/domain/entités/Groupe'
+import {
+  canDeleteGroup as canDeleteGroupByRole,
+  canManageGroup as canManageGroupByRole,
+  canManageGroupMembers,
+  getGroupRole,
+  getGroupRoleLabel,
+  isGroupCreator,
+  type GroupeModel,
+} from '@/domain/entités/Groupe'
 import type { GroupeMembreModel } from '@/domain/entités/GroupeMember'
 import type { ProfilModel } from '@/domain/entités/Profil'
 import { colors } from '@/shared/theme/colors'
@@ -41,10 +49,10 @@ export default function GroupeDetailScreen() {
   const [editDescription, setEditDescription] = useState('')
   const [editName, setEditName] = useState('')
   const [groupe, setGroupe] = useState<GroupeModel | null>(null)
+  const [currentMembership, setCurrentMembership] =
+    useState<GroupeMembreModel | null>(null)
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
   const [isAddingMember, setIsAddingMember] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [isCreator, setIsCreator] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -85,10 +93,7 @@ export default function GroupeDetailScreen() {
     setEditDescription(groupeItem?.description ?? '')
     setMembers(memberItems)
     setMemberProfiles(profileById)
-    setIsAdmin(Boolean(currentMembership?.isGroupAdmin))
-    setIsCreator(
-      Boolean(groupeItem?.createdBy && groupeItem.createdBy === user?.id),
-    )
+    setCurrentMembership(currentMembership ?? null)
   }, [groupId, groupName])
 
   useFocusEffect(
@@ -99,10 +104,9 @@ export default function GroupeDetailScreen() {
         if (!isMounted) return
         console.warn(error)
         setGroupe(null)
+        setCurrentMembership(null)
         setMembers([])
         setMemberProfiles({})
-        setIsAdmin(false)
-        setIsCreator(false)
       })
 
       return () => {
@@ -248,7 +252,7 @@ export default function GroupeDetailScreen() {
       return
     }
 
-    if (isCreator) {
+    if (isGroupCreator(groupe, currentUserId)) {
       setSettingsError('Le créateur doit supprimer le groupe plutôt que le quitter.')
       return
     }
@@ -268,7 +272,17 @@ export default function GroupeDetailScreen() {
   }
 
   const displayedGroupName = groupe?.name ?? groupName
-  const canManageGroup = isAdmin || isCreator
+  const canManageGroup = canManageGroupByRole(
+    groupe,
+    currentMembership,
+    currentUserId,
+  )
+  const canManageMembers = canManageGroupMembers(
+    groupe,
+    currentMembership,
+    currentUserId,
+  )
+  const canDeleteCurrentGroup = canDeleteGroupByRole(groupe, currentUserId)
 
   return (
     <View style={styles.screen}>
@@ -290,7 +304,7 @@ export default function GroupeDetailScreen() {
           <Text style={styles.subtitle}>{members.length} membre(s)</Text>
         </View>
 
-        {canManageGroup ? (
+        {canManageMembers ? (
           <Pressable
             onPress={() => setIsAddMemberOpen(true)}
             style={styles.headerIconButton}
@@ -447,7 +461,9 @@ export default function GroupeDetailScreen() {
                           {isCurrentUser ? ' (vous)' : ''}
                         </Text>
                         <Text style={styles.memberRole}>
-                          {member.isGroupAdmin ? 'Admin' : 'Membre'}
+                          {getGroupRoleLabel(
+                            getGroupRole(groupe, member, member.userId),
+                          )}
                         </Text>
                       </View>
                     </View>
@@ -459,7 +475,7 @@ export default function GroupeDetailScreen() {
                 <Text style={styles.errorText}>{settingsError}</Text>
               ) : null}
 
-              {isCreator ? (
+              {canDeleteCurrentGroup ? (
                 <Pressable
                   disabled={isDeleting}
                   onPress={confirmDeleteGroup}

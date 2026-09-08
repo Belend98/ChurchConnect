@@ -10,7 +10,8 @@ import {
   Text,
   TextInput,
 } from 'react-native'
-import { authService } from '@/composition/auth'
+import { authService } from '@/composition/Auth'
+import { colors } from '@/shared/theme/colors'
 import {
   createUserSchema,
   type CreateUserFormInput,
@@ -209,30 +210,31 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 16,
     justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.primary,
   },
   subtitle: {
     marginTop: 8,
     marginBottom: 20,
-    color: '#4B5563',
+    color: colors.onSurfaceVariant,
   },
   label: {
     marginTop: 8,
     marginBottom: 4,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.primary,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 6,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    color: colors.onSurface,
     padding: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceContainerLowest,
   },
   multiline: {
     minHeight: 80,
@@ -244,13 +246,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: colors.primary,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#ffffff',
     fontWeight: '700',
   },
   signOutButton: {
@@ -259,14 +261,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EF4444',
+    borderColor: colors.error,
+    borderWidth: 1,
   },
   signOutButtonText: {
-    color: '#FFFFFF',
+    color: colors.error,
     fontWeight: '600',
   },
   errorText: {
-    color: '#B91C1C',
+    color: colors.error,
     marginTop: 6,
   },
 })

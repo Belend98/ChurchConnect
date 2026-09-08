@@ -3,7 +3,6 @@ import { colors } from '@/shared/theme/colors'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 type PredicationComponentProps = {
-  accentColor?: string
   canManagePredication?: boolean
   categoryName?: string
   isDeleting?: boolean
@@ -37,7 +36,6 @@ function formatDate(date: Date): string {
 }
 
 export function PredicationComponent({
-  accentColor = colors.primaryFixed,
   canManagePredication = false,
   categoryName,
   isDeleting = false,
@@ -56,18 +54,13 @@ export function PredicationComponent({
   return (
     <View style={styles.card}>
       <View style={styles.main}>
-        <View style={[styles.thumbnail, { backgroundColor: accentColor }]}>
-          <Text style={styles.thumbnailText}>
-            {formatDuration(predication.durationSeconds)}
-          </Text>
-        </View>
-
         <View style={styles.info}>
           <View style={styles.metaLine}>
-            <Text style={styles.serie}>
-              {categoryName ?? 'Prédication'}
-            </Text>
+            <Text style={styles.serie}>{categoryName ?? 'Prédication'}</Text>
             <Text style={styles.date}>{formatDate(predication.createdAt)}</Text>
+            <Text style={styles.date}>
+              {formatDuration(predication.durationSeconds)}
+            </Text>
           </View>
           <Text style={styles.title}>{predication.title}</Text>
           <Text numberOfLines={1} style={styles.mediaUrl}>
@@ -143,31 +136,14 @@ export function PredicationComponent({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
-    gap: 14,
-    padding: 16,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14,
   },
   main: {
     flexDirection: 'row',
-    gap: 14,
-  },
-  thumbnail: {
-    alignItems: 'center',
-    borderRadius: 12,
-    height: 86,
-    justifyContent: 'flex-end',
-    padding: 8,
-    width: 86,
-  },
-  thumbnailText: {
-    backgroundColor: 'rgba(3, 31, 65, 0.88)',
-    borderRadius: 8,
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
   },
   info: {
     flex: 1,
@@ -176,28 +152,23 @@ const styles = StyleSheet.create({
   metaLine: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   serie: {
-    backgroundColor: colors.surfaceContainerHigh,
-    borderRadius: 999,
     color: colors.primary,
     flexShrink: 1,
-    fontSize: 11,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '600',
   },
   date: {
     color: colors.onSurfaceVariant,
     fontSize: 12,
-    fontWeight: '700',
   },
   title: {
     color: colors.primary,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '700',
     lineHeight: 25,
   },
   mediaUrl: {
@@ -221,7 +192,7 @@ const styles = StyleSheet.create({
   listenButton: {
     alignItems: 'center',
     backgroundColor: colors.primary,
-    borderRadius: 12,
+    borderRadius: 8,
     justifyContent: 'center',
     minHeight: 44,
     paddingHorizontal: 18,
@@ -229,12 +200,12 @@ const styles = StyleSheet.create({
   listenButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   editButton: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
-    borderRadius: 12,
+    borderRadius: 8,
     justifyContent: 'center',
     minHeight: 44,
     paddingHorizontal: 14,
@@ -242,13 +213,12 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   deleteButton: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainer,
     borderColor: colors.error,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     justifyContent: 'center',
     minHeight: 44,
@@ -257,7 +227,7 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: colors.error,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   disabledButton: {
     opacity: 0.55,
@@ -268,35 +238,37 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   likeButton: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 999,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   likeButtonActive: {
-    backgroundColor: colors.secondaryFixed,
+    borderColor: colors.secondary,
   },
   likes: {
     color: colors.secondary,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   likesActive: {
     color: colors.secondary,
   },
   favoriteButton: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 999,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   favoriteButtonActive: {
-    backgroundColor: colors.primaryFixed,
+    borderColor: colors.primary,
   },
   favoriteButtonText: {
     color: colors.primary,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   favoriteButtonTextActive: {
     color: colors.primary,

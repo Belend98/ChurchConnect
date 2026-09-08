@@ -184,13 +184,11 @@ export default function PredicationPlayerScreen() {
           <Text style={styles.backButtonText}>‹</Text>
           <Text style={styles.backLabel}>Prédications</Text>
         </Pressable>
-        <Text style={styles.topAction}>Minuteur</Text>
       </View>
 
       <View style={styles.hero}>
         <View style={styles.heroTopLine}>
-          <Text style={styles.heroTag}>{`Série · ${serie}`}</Text>
-          <Text style={styles.heroDate}>28 avril</Text>
+          <Text style={styles.heroTag}>{serie}</Text>
         </View>
         <Text style={styles.heroTitle}>{title}</Text>
         {speaker || reference ? (
@@ -209,11 +207,6 @@ export default function PredicationPlayerScreen() {
       </View>
 
       <View style={styles.playerCard}>
-        <View style={styles.modeSwitch}>
-          <Text style={styles.modeActive}>Mode audio</Text>
-          <Text style={styles.modeInactive}>Mode vidéo</Text>
-        </View>
-
         <View style={styles.progressArea}>
           <Pressable
             onLayout={updateProgressTrackWidth}
@@ -254,57 +247,25 @@ export default function PredicationPlayerScreen() {
             </Text>
           </Pressable>
         </View>
-
-        <View style={styles.actions}>
-          <Pressable
-            onPress={() => setIsLiked((current) => !current)}
-            style={styles.actionItem}
-          >
-            <Text style={[styles.actionIcon, isLiked && styles.actionActive]}>
-              ♥
-            </Text>
-            <Text style={[styles.actionText, isLiked && styles.actionActive]}>
-              {isLiked ? 'Aimé' : 'Aimer'}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setIsFavorite((current) => !current)}
-            style={styles.actionItem}
-          >
-            <Text
-              style={[styles.actionIcon, isFavorite && styles.actionActive]}
-            >
-              ★
-            </Text>
-            <Text
-              style={[styles.actionText, isFavorite && styles.actionActive]}
-            >
-              {isFavorite ? 'Sauvé' : 'Favori'}
-            </Text>
-          </Pressable>
-          <View style={styles.actionItem}>
-            <Text style={styles.actionIcon}>↗</Text>
-            <Text style={styles.actionText}>Partager</Text>
-          </View>
-          <View style={styles.actionItem}>
-            <Text style={styles.actionIcon}>↓</Text>
-            <Text style={styles.actionText}>Hors-ligne</Text>
-          </View>
-        </View>
       </View>
 
-      <View style={styles.tabs}>
-        <Text style={styles.tabActive}>Résumé</Text>
-        <Text style={styles.tab}>Retranscription</Text>
-        <Text style={styles.tab}>Questions</Text>
-      </View>
-
-      <View style={styles.noteCard}>
-        <Text style={styles.cardTitle}>Résumé non disponible</Text>
-        <Text style={styles.emptyText}>
-          Les notes, la retranscription et les questions pourront être affichées
-          quand ces données seront ajoutées en base.
-        </Text>
+      <View style={styles.actions}>
+        <Pressable
+          onPress={() => setIsLiked((current) => !current)}
+          style={[styles.actionButton, isLiked && styles.actionButtonActive]}
+        >
+          <Text style={[styles.actionText, isLiked && styles.actionActive]}>
+            {isLiked ? 'Aimé' : 'Aimer'}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setIsFavorite((current) => !current)}
+          style={[styles.actionButton, isFavorite && styles.actionButtonActive]}
+        >
+          <Text style={[styles.actionText, isFavorite && styles.actionActive]}>
+            {isFavorite ? 'Favori' : 'Ajouter aux favoris'}
+          </Text>
+        </Pressable>
       </View>
     </ScrollView>
   )
@@ -323,7 +284,6 @@ const styles = StyleSheet.create({
   topBar: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
   },
   backButton: {
     alignItems: 'center',
@@ -340,18 +300,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
-  topAction: {
-    color: colors.onSurfaceVariant,
-    fontSize: 13,
-    fontWeight: '800',
-  },
   hero: {
-    backgroundColor: colors.primaryContainer,
-    borderRadius: 12,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 10,
-    minHeight: 230,
-    justifyContent: 'flex-end',
-    padding: 20,
+    padding: 18,
   },
   heroTopLine: {
     alignItems: 'center',
@@ -359,71 +314,33 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   heroTag: {
-    backgroundColor: colors.secondary,
-    borderRadius: 999,
-    color: '#ffffff',
+    color: colors.onSurfaceVariant,
     fontSize: 12,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  heroDate: {
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    borderRadius: 999,
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    fontWeight: '600',
   },
   heroTitle: {
-    color: '#ffffff',
-    fontSize: 27,
-    fontWeight: '900',
-    lineHeight: 35,
+    color: colors.primary,
+    fontSize: 25,
+    fontWeight: '700',
+    lineHeight: 33,
   },
   heroSubtitle: {
-    color: colors.primaryFixedDim,
+    color: colors.onSurfaceVariant,
     fontSize: 14,
-    fontWeight: '700',
     lineHeight: 21,
   },
   playerNotice: {
-    color: colors.secondaryContainer,
+    color: colors.error,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   playerCard: {
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 12,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 18,
     padding: 18,
-  },
-  modeSwitch: {
-    alignSelf: 'center',
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 999,
-    flexDirection: 'row',
-    padding: 4,
-  },
-  modeActive: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-  },
-  modeInactive: {
-    color: colors.onSurfaceVariant,
-    fontSize: 13,
-    fontWeight: '800',
-    paddingHorizontal: 18,
-    paddingVertical: 9,
   },
   progressArea: {
     gap: 8,
@@ -447,12 +364,11 @@ const styles = StyleSheet.create({
   currentTime: {
     color: colors.primary,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   episode: {
     color: colors.outline,
     fontSize: 11,
-    fontWeight: '800',
     textTransform: 'uppercase',
   },
   totalTime: {
@@ -468,7 +384,7 @@ const styles = StyleSheet.create({
   smallControl: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
-    borderRadius: 12,
+    borderRadius: 8,
     height: 44,
     justifyContent: 'center',
     minWidth: 54,
@@ -477,7 +393,7 @@ const styles = StyleSheet.create({
   smallControlText: {
     color: colors.primary,
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   roundControl: {
     alignItems: 'center',
@@ -493,7 +409,7 @@ const styles = StyleSheet.create({
   },
   playButton: {
     alignItems: 'center',
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.primary,
     borderRadius: 32,
     height: 64,
     justifyContent: 'center',
@@ -502,72 +418,32 @@ const styles = StyleSheet.create({
   playButtonText: {
     color: '#ffffff',
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: '700',
     lineHeight: 32,
   },
   actions: {
-    borderTopColor: colors.surfaceContainerHigh,
-    borderTopWidth: 1,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 12,
+    gap: 10,
   },
-  actionItem: {
+  actionButton: {
     alignItems: 'center',
-    gap: 4,
-    minWidth: 68,
-  },
-  actionIcon: {
-    color: colors.onSurfaceVariant,
-    fontSize: 23,
-    fontWeight: '900',
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 10,
   },
   actionText: {
     color: colors.onSurfaceVariant,
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
   },
   actionActive: {
     color: colors.secondary,
   },
-  tabs: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  tab: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 999,
-    color: colors.onSurface,
-    fontSize: 13,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  tabActive: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  noteCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
-    gap: 12,
-    padding: 18,
-  },
-  cardTitle: {
-    color: colors.primary,
-    fontSize: 19,
-    fontWeight: '900',
-  },
-  emptyText: {
-    color: colors.onSurfaceVariant,
-    fontSize: 14,
-    lineHeight: 22,
+  actionButtonActive: {
+    borderColor: colors.secondary,
   },
 })

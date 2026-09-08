@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
     borderColor: colors.surfaceContainerHigh,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
     flex: 1,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   selectPlaceholder: {
     color: colors.outline,
@@ -203,14 +203,14 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   overlay: {
-    backgroundColor: 'rgba(3, 31, 65, 0.42)',
+    backgroundColor: 'rgba(15, 23, 42, 0.32)',
     flex: 1,
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: colors.surfaceContainerLowest,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
     maxHeight: '82%',
     padding: 18,
   },
@@ -222,19 +222,19 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: colors.primary,
-    fontSize: 21,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '700',
   },
   closeText: {
     color: colors.secondary,
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   categoryList: {
     maxHeight: 280,
   },
   categoryOption: {
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 13,
   },
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   categoryOptionText: {
     color: colors.primary,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   categoryOptionTextActive: {
     color: '#ffffff',
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: colors.surfaceContainer,
     borderColor: colors.surfaceContainerHigh,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     color: colors.onSurface,
     fontSize: 15,
@@ -265,15 +265,15 @@ const styles = StyleSheet.create({
   },
   addButton: {
     alignItems: 'center',
-    backgroundColor: colors.secondary,
-    borderRadius: 12,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
     height: 48,
     justifyContent: 'center',
   },
   addButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   disabledButton: {
     opacity: 0.6,

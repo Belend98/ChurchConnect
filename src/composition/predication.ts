@@ -1,5 +1,5 @@
 import { PredicationService } from '@/application/PredicationService'
-import { authService } from '@/composition/auth'
+import { authService } from '@/composition/Auth'
 import { SupabasePredicRepository } from '@/infrastructure/predication/SupabasePredicRepository'
 import { SupabasePredicationFavoriteRepository } from '@/infrastructure/predication/SupabasePredicationFavoriteRepository'
 import { SupabasePredicationLikeRepository } from '@/infrastructure/predication/SupabasePredicationLikeRepository'

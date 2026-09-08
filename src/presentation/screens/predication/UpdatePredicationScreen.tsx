@@ -166,11 +166,7 @@ export default function UpdatePredicationScreen() {
       </View>
 
       <View>
-        <Text style={styles.eyebrow}>Ressource existante</Text>
         <Text style={styles.title}>Modifier la prédication</Text>
-        <Text style={styles.intro}>
-          Mets à jour les données enregistrées pour cette prédication.
-        </Text>
       </View>
 
       <View style={styles.formCard}>
@@ -318,41 +314,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
-  eyebrow: {
-    color: colors.secondary,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
   title: {
     color: colors.primary,
-    fontSize: 30,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  intro: {
-    color: colors.onSurfaceVariant,
-    fontSize: 16,
-    lineHeight: 24,
-    marginTop: 8,
+    fontSize: 28,
+    fontWeight: '700',
   },
   formCard: {
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 8,
-    padding: 18,
+    padding: 16,
   },
   label: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     marginTop: 6,
   },
   input: {
     backgroundColor: colors.surfaceContainer,
     borderColor: colors.surfaceContainerHigh,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     color: colors.onSurface,
     fontSize: 15,
@@ -363,7 +347,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
     borderColor: colors.surfaceContainerHigh,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
@@ -377,18 +361,17 @@ const styles = StyleSheet.create({
   fileTitle: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   fileMeta: {
     color: colors.onSurfaceVariant,
     fontSize: 12,
-    fontWeight: '700',
     lineHeight: 18,
   },
   fileButton: {
     alignItems: 'center',
-    backgroundColor: colors.secondary,
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
     justifyContent: 'center',
     minHeight: 42,
     paddingHorizontal: 14,
@@ -396,7 +379,7 @@ const styles = StyleSheet.create({
   fileButtonText: {
     color: '#ffffff',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   orText: {
     color: colors.onSurfaceVariant,
@@ -407,7 +390,7 @@ const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
     backgroundColor: colors.primaryContainer,
-    borderRadius: 12,
+    borderRadius: 8,
     height: 52,
     justifyContent: 'center',
     marginTop: 12,
@@ -418,7 +401,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   errorText: {
     color: colors.error,
@@ -428,7 +411,9 @@ const styles = StyleSheet.create({
   },
   accessCard: {
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 8,
     padding: 18,
   },

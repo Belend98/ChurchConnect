@@ -62,11 +62,7 @@ export default function CreateGroupeScreen() {
       </View>
 
       <View>
-        <Text style={styles.eyebrow}>Nouvel espace</Text>
         <Text style={styles.title}>Créer un groupe</Text>
-        <Text style={styles.intro}>
-          Créez un groupe privé. Vous en serez automatiquement membre et admin.
-        </Text>
       </View>
 
       <View style={styles.formCard}>
@@ -136,41 +132,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
-  eyebrow: {
-    color: colors.secondary,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
   title: {
     color: colors.primary,
-    fontSize: 30,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  intro: {
-    color: colors.onSurfaceVariant,
-    fontSize: 16,
-    lineHeight: 24,
-    marginTop: 8,
+    fontSize: 28,
+    fontWeight: '700',
   },
   formCard: {
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 8,
-    padding: 18,
+    padding: 16,
   },
   label: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     marginTop: 6,
   },
   input: {
     backgroundColor: colors.surfaceContainer,
     borderColor: colors.surfaceContainerHigh,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     color: colors.onSurface,
     fontSize: 15,
@@ -184,7 +168,7 @@ const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
     backgroundColor: colors.primaryContainer,
-    borderRadius: 12,
+    borderRadius: 8,
     height: 52,
     justifyContent: 'center',
     marginTop: 12,
@@ -195,7 +179,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   errorText: {
     color: colors.error,

@@ -23,13 +23,6 @@ import { useCallback, useState } from 'react'
 
 const ALL_CATEGORIES_FILTER = 'all'
 
-const accentColors = [
-  colors.secondaryFixed,
-  colors.surfaceContainerHigh,
-  colors.primaryFixed,
-  colors.tertiaryFixed,
-]
-
 export default function PredicationScreen() {
   const [categories, setCategories] = useState<CategorieModel[]>([])
   const [categoryActionId, setCategoryActionId] = useState<string | null>(null)
@@ -425,7 +418,6 @@ export default function PredicationScreen() {
     >
       <View style={styles.header}>
         <View>
-          <Text style={styles.eyebrow}>Ressources spirituelles</Text>
           <Text style={styles.title}>Prédications</Text>
         </View>
         {canManagePredicationItems ? (
@@ -446,10 +438,6 @@ export default function PredicationScreen() {
           <Text style={styles.manageButtonText}>Catégories</Text>
         </Pressable>
       ) : null}
-
-      <Text style={styles.intro}>
-        Retrouvez les messages à écouter, méditer ou garder pour plus tard.
-      </Text>
 
       <View style={styles.searchBox}>
         <Text style={styles.searchIcon}>⌕</Text>
@@ -514,9 +502,8 @@ export default function PredicationScreen() {
       </View>
 
       <View style={styles.sermonList}>
-        {filteredPredications.map((predication, index) => (
+        {filteredPredications.map((predication) => (
           <PredicationComponent
-            accentColor={accentColors[index % accentColors.length]}
             canManagePredication={canManagePredicationItems}
             categoryName={getCategoryName(predication.categorieId)}
             isDeleting={deletingId === predication.id}
@@ -670,51 +657,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  eyebrow: {
-    color: colors.secondary,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
   title: {
     color: colors.primary,
-    fontSize: 30,
-    fontWeight: '800',
-    marginTop: 4,
+    fontSize: 28,
+    fontWeight: '700',
   },
   sortButton: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 999,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   sortButtonText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '800',
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   manageButton: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.primaryFixed,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   manageButtonText: {
     color: colors.primary,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  intro: {
-    color: colors.onSurfaceVariant,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 13,
+    fontWeight: '600',
   },
   searchBox: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 10,
     minHeight: 54,
@@ -736,61 +713,62 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   filterPill: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
   filterPillActive: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterText: {
     color: colors.onSurface,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   filterTextActive: {
     color: '#ffffff',
   },
   resumeCard: {
     alignItems: 'center',
-    backgroundColor: colors.primaryContainer,
-    borderRadius: 12,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 18,
   },
   resumeLabel: {
-    color: colors.secondaryContainer,
+    color: colors.onSurfaceVariant,
     fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    fontWeight: '600',
   },
   resumeTitle: {
-    color: '#ffffff',
+    color: colors.primary,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     marginTop: 4,
   },
   resumeMeta: {
-    color: '#b0c7f1',
+    color: colors.onSurfaceVariant,
     fontSize: 13,
-    fontWeight: '700',
     marginTop: 3,
   },
   resumeButton: {
     alignItems: 'center',
-    backgroundColor: colors.secondaryContainer,
-    borderRadius: 24,
-    height: 48,
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    height: 40,
     justifyContent: 'center',
-    width: 48,
+    width: 40,
   },
   resumeButtonText: {
-    color: '#390c00',
+    color: '#ffffff',
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   sectionHeader: {
     alignItems: 'center',
@@ -800,8 +778,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.primary,
-    fontSize: 21,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
   },
   sectionMeta: {
     color: colors.onSurfaceVariant,
@@ -813,14 +791,16 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 8,
     padding: 18,
   },
   emptyTitle: {
     color: colors.primary,
     fontSize: 19,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   emptyText: {
     color: colors.onSurfaceVariant,
@@ -828,14 +808,14 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   modalOverlay: {
-    backgroundColor: 'rgba(3, 31, 65, 0.42)',
+    backgroundColor: 'rgba(15, 23, 42, 0.32)',
     flex: 1,
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: colors.surfaceContainerLowest,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
     gap: 14,
     maxHeight: '86%',
     padding: 18,
@@ -848,12 +828,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     color: colors.primary,
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   modalClose: {
     color: colors.secondary,
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   modalText: {
     color: colors.onSurfaceVariant,
@@ -868,7 +848,7 @@ const styles = StyleSheet.create({
   categoryInput: {
     backgroundColor: colors.surfaceContainer,
     borderColor: colors.surfaceContainerHigh,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     color: colors.onSurface,
     flex: 1,
@@ -879,7 +859,7 @@ const styles = StyleSheet.create({
   smallActionButton: {
     alignItems: 'center',
     backgroundColor: colors.primaryContainer,
-    borderRadius: 12,
+    borderRadius: 8,
     height: 46,
     justifyContent: 'center',
     paddingHorizontal: 14,
@@ -887,7 +867,7 @@ const styles = StyleSheet.create({
   smallActionButtonText: {
     color: '#ffffff',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   categoryList: {
     gap: 10,
@@ -897,7 +877,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
     borderColor: colors.surfaceContainerHigh,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 8,
@@ -907,12 +887,13 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
     flex: 1,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   iconActionButton: {
     alignItems: 'center',
-    backgroundColor: colors.primaryFixed,
+    borderColor: colors.surfaceContainerHigh,
     borderRadius: 18,
+    borderWidth: 1,
     height: 36,
     justifyContent: 'center',
     width: 36,
@@ -920,12 +901,11 @@ const styles = StyleSheet.create({
   iconActionText: {
     color: colors.primary,
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '700',
     lineHeight: 20,
   },
   iconDangerButton: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLowest,
     borderColor: colors.error,
     borderRadius: 18,
     borderWidth: 1,
@@ -936,7 +916,7 @@ const styles = StyleSheet.create({
   iconDangerText: {
     color: colors.error,
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
     lineHeight: 26,
   },
   disabledButton: {

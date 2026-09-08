@@ -1,5 +1,6 @@
-import { authService } from '@/composition/auth'
+import { authService } from '@/composition/Auth'
 import { signUpSchema, type SignUpInput } from '@/domain/rules/authSchema'
+import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
@@ -119,31 +120,32 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.primary,
   },
   subtitle: {
     marginTop: 8,
     marginBottom: 20,
-    color: '#4B5563',
+    color: colors.onSurfaceVariant,
   },
   label: {
     marginBottom: 6,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.primary,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.surfaceContainerHigh,
     borderRadius: 8,
+    color: colors.onSurface,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surfaceContainerLowest,
   },
   button: {
     marginTop: 4,
@@ -151,17 +153,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: colors.primary,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#ffffff',
     fontWeight: '700',
   },
   errorText: {
-    color: '#B91C1C',
+    color: colors.error,
     marginBottom: 12,
   },
   linkButton: {
@@ -169,7 +171,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#1D4ED8',
+    color: colors.secondary,
     fontWeight: '600',
   },
 })

@@ -1,4 +1,4 @@
-import { authService } from '@/composition/auth'
+import { authService } from '@/composition/Auth'
 import { profilService } from '@/composition/profil'
 import { router } from 'expo-router'
 import { useEffect } from 'react'

@@ -1,4 +1,5 @@
 import type { AuthService } from '@/application/AuthService'
+import { canManageGroup } from '@/domain/entités/Groupe'
 import type {
   CreateGroupeModel,
   GroupeModel,
@@ -59,7 +60,7 @@ export class GroupeService {
   }
 
   async updateGroupe(id: string, data: UpdateGroupeModel): Promise<GroupeModel> {
-    await this.ensureCurrentUserIsGroupAdmin(id)
+    await this.ensureCurrentUserCanManageGroup(id)
 
     return this.groupeRepository.update(id, data)
   }
@@ -72,7 +73,7 @@ export class GroupeService {
   }
 
   async addMembre(data: CreateGroupeMembreModel): Promise<GroupeMembreModel> {
-    await this.ensureCurrentUserIsGroupAdmin(data.groupeId)
+    await this.ensureCurrentUserCanManageGroup(data.groupeId)
 
     return this.groupeMembreRepository.create(data)
   }
@@ -81,7 +82,7 @@ export class GroupeService {
     groupeId: string,
     username: string,
   ): Promise<GroupeMembreModel> {
-    await this.ensureCurrentUserIsGroupAdmin(groupeId)
+    await this.ensureCurrentUserCanManageGroup(groupeId)
 
     const profile = await this.profilRepository.findByUsername(username.trim())
 
@@ -132,7 +133,7 @@ export class GroupeService {
 
     if (!membership) throw new Error('Membre introuvable.')
 
-    await this.ensureCurrentUserIsGroupAdmin(membership.groupeId)
+    await this.ensureCurrentUserCanManageGroup(membership.groupeId)
 
     return this.groupeMembreRepository.update(id, data)
   }
@@ -145,7 +146,7 @@ export class GroupeService {
     const currentUserId = await this.authService.getCurrentUserIdOrThrow()
 
     if (currentUserId !== membership.userId) {
-      await this.ensureCurrentUserIsGroupAdmin(membership.groupeId)
+      await this.ensureCurrentUserCanManageGroup(membership.groupeId)
     }
 
     return this.groupeMembreRepository.delete(id)
@@ -155,7 +156,7 @@ export class GroupeService {
     const currentUserId = await this.authService.getCurrentUserIdOrThrow()
 
     if (currentUserId !== userId) {
-      await this.ensureCurrentUserIsGroupAdmin(groupeId)
+      await this.ensureCurrentUserCanManageGroup(groupeId)
     }
 
     return this.groupeMembreRepository.deleteByGroupeAndUser(groupeId, userId)
@@ -169,15 +170,18 @@ export class GroupeService {
     if (!isMember) throw new Error("Vous n'êtes pas membre de ce groupe.")
   }
 
-  private async ensureCurrentUserIsGroupAdmin(groupeId: string): Promise<void> {
+  private async ensureCurrentUserCanManageGroup(groupeId: string): Promise<void> {
     const userId = await this.authService.getCurrentUserIdOrThrow()
+    const groupe = await this.groupeRepository.getById(groupeId)
     const memberships = await this.groupeMembreRepository.listByUser(userId)
-    const isAdmin = memberships.some(
-      (membership) =>
-        membership.groupeId === groupeId && membership.isGroupAdmin,
+    const membership = memberships.find(
+      (item) => item.groupeId === groupeId,
     )
 
-    if (!isAdmin) throw new Error("Vous n'êtes pas administrateur de ce groupe.")
+    if (!groupe) throw new Error('Groupe introuvable.')
+    if (!canManageGroup(groupe, membership, userId)) {
+      throw new Error("Vous n'avez pas les droits de gestion de ce groupe.")
+    }
   }
 
   private async ensureCurrentUserIsGroupCreator(groupeId: string): Promise<void> {

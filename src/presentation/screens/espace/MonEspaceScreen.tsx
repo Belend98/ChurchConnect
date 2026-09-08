@@ -1,4 +1,4 @@
-import { authService } from '@/composition/auth'
+import { authService } from '@/composition/Auth'
 import { groupeService } from '@/composition/groupe'
 import { predicationService } from '@/composition/predication'
 import { profilService } from '@/composition/profil'
@@ -131,17 +131,9 @@ export default function MonEspaceScreen() {
     >
       <View style={styles.header}>
         <View>
-          <Text style={styles.eyebrow}>Mon espace personnel</Text>
           <Text style={styles.title}>Bienvenue, {displayName}</Text>
         </View>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{avatarInitial}</Text>
-        </View>
       </View>
-
-      <Text style={styles.intro}>
-        Retrouvez rapidement votre profil, vos groupes et vos prédications.
-      </Text>
 
       <View style={styles.profileCard}>
         <View style={styles.profileTop}>
@@ -251,13 +243,6 @@ export default function MonEspaceScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.helpCard}>
-        <Text style={styles.helpTitle}>Besoin d’accompagnement ?</Text>
-        <Text style={styles.helpText}>
-          Les options d’aide et de préférences pourront être ajoutées ici.
-        </Text>
-      </View>
-
       <Pressable onPress={signOut} style={styles.signOutButton}>
         <Text style={styles.signOutButtonText}>Se déconnecter</Text>
       </Pressable>
@@ -281,43 +266,19 @@ const styles = StyleSheet.create({
     gap: 14,
     justifyContent: 'space-between',
   },
-  eyebrow: {
-    color: colors.secondary,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
   title: {
     color: colors.primary,
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 36,
-    marginTop: 4,
-  },
-  avatar: {
-    alignItems: 'center',
-    backgroundColor: colors.primaryContainer,
-    borderRadius: 22,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  avatarText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  intro: {
-    color: colors.onSurfaceVariant,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 26,
+    fontWeight: '700',
+    lineHeight: 34,
   },
   profileCard: {
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     gap: 16,
-    padding: 18,
+    padding: 16,
   },
   profileTop: {
     alignItems: 'center',
@@ -326,16 +287,16 @@ const styles = StyleSheet.create({
   },
   profileAvatar: {
     alignItems: 'center',
-    backgroundColor: colors.secondaryFixed,
-    borderRadius: 34,
-    height: 68,
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 26,
+    height: 52,
     justifyContent: 'center',
-    width: 68,
+    width: 52,
   },
   profileAvatarText: {
     color: colors.primary,
-    fontSize: 26,
-    fontWeight: '900',
+    fontSize: 22,
+    fontWeight: '700',
   },
   profileInfo: {
     flex: 1,
@@ -344,36 +305,30 @@ const styles = StyleSheet.create({
   profileName: {
     color: colors.primary,
     fontSize: 21,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   profileMeta: {
     color: colors.onSurfaceVariant,
     fontSize: 13,
-    fontWeight: '700',
   },
   profileRole: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 999,
     color: colors.primary,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     marginTop: 2,
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
   },
   secondaryButton: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
-    borderRadius: 12,
+    borderRadius: 8,
     minHeight: 46,
     justifyContent: 'center',
   },
   secondaryButtonText: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -382,7 +337,9 @@ const styles = StyleSheet.create({
   statCard: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     flex: 1,
     gap: 4,
     minHeight: 82,
@@ -392,12 +349,11 @@ const styles = StyleSheet.create({
   statValue: {
     color: colors.primary,
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   statLabel: {
     color: colors.onSurfaceVariant,
     fontSize: 12,
-    fontWeight: '800',
   },
   section: {
     gap: 10,
@@ -409,23 +365,19 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.primary,
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '700',
   },
   sectionMeta: {
-    backgroundColor: colors.secondaryFixed,
-    borderRadius: 999,
-    color: colors.secondary,
+    color: colors.onSurfaceVariant,
     fontSize: 12,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
   },
   favoriteRow: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
     minHeight: 72,
@@ -433,16 +385,16 @@ const styles = StyleSheet.create({
   },
   favoriteIcon: {
     alignItems: 'center',
-    backgroundColor: colors.secondaryFixed,
-    borderRadius: 20,
-    height: 40,
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 16,
+    height: 32,
     justifyContent: 'center',
-    width: 40,
+    width: 32,
   },
   favoriteIconText: {
-    color: colors.secondary,
+    color: colors.primary,
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   favoriteBody: {
     flex: 1,
@@ -451,28 +403,30 @@ const styles = StyleSheet.create({
   favoriteTitle: {
     color: colors.primary,
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   favoriteText: {
     color: colors.onSurfaceVariant,
     fontSize: 12,
-    fontWeight: '700',
   },
   emptyFavorites: {
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     padding: 14,
   },
   emptyFavoritesText: {
     color: colors.onSurfaceVariant,
     fontSize: 13,
-    fontWeight: '700',
     lineHeight: 20,
   },
   linkRow: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     minHeight: 70,
@@ -481,39 +435,23 @@ const styles = StyleSheet.create({
   linkTitle: {
     color: colors.primary,
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   linkText: {
     color: colors.onSurfaceVariant,
     fontSize: 13,
-    fontWeight: '700',
     marginTop: 3,
   },
   linkArrow: {
-    color: colors.secondary,
+    color: colors.onSurfaceVariant,
     fontSize: 28,
     fontWeight: '700',
   },
-  helpCard: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 12,
-    gap: 4,
-    padding: 16,
-  },
-  helpTitle: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  helpText: {
-    color: colors.onSurfaceVariant,
-    fontSize: 13,
-    lineHeight: 20,
-  },
   signOutButton: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 12,
+    borderColor: colors.error,
+    borderRadius: 8,
+    borderWidth: 1,
     minHeight: 50,
     justifyContent: 'center',
   },
