@@ -1,5 +1,6 @@
 import { authService } from '@/composition/Auth'
 import { groupeService } from '@/composition/groupe'
+import { messageGroupeService } from '@/composition/messageGroupe'
 import { profilService } from '@/composition/profil'
 import {
   canDeleteGroup as canDeleteGroupByRole,
@@ -11,6 +12,7 @@ import {
   type GroupeModel,
 } from '@/domain/entités/Groupe'
 import type { GroupeMembreModel } from '@/domain/entités/GroupeMember'
+import type { MessageGroupeModel } from '@/domain/entités/MessageGroupe'
 import type { ProfilModel } from '@/domain/entités/Profil'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
@@ -40,6 +42,24 @@ function getProfileName(profile: ProfilModel | undefined, userId: string) {
   return fullName || profile.username || `Membre ${userId.slice(0, 6)}`
 }
 
+function formatMessageTime(date: Date) {
+  return date.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function appendMessageUnique(
+  items: MessageGroupeModel[],
+  message: MessageGroupeModel,
+) {
+  if (items.some((item) => item.id === message.id)) return items
+
+  return [...items, message].sort(
+    (first, second) => first.createdAt.getTime() - second.createdAt.getTime(),
+  )
+}
+
 export default function GroupeDetailScreen() {
   const params = useLocalSearchParams()
   const groupId = getParam(params.id)
@@ -55,12 +75,17 @@ export default function GroupeDetailScreen() {
   const [isAddingMember, setIsAddingMember] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [memberProfiles, setMemberProfiles] = useState<
     Record<string, ProfilModel>
   >({})
   const [members, setMembers] = useState<GroupeMembreModel[]>([])
+  const [messageText, setMessageText] = useState('')
+  const [messages, setMessages] = useState<MessageGroupeModel[]>([])
+  const [messagesError, setMessagesError] = useState<string | null>(null)
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [username, setUsername] = useState('')
 
@@ -96,6 +121,24 @@ export default function GroupeDetailScreen() {
     setCurrentMembership(currentMembership ?? null)
   }, [groupId, groupName])
 
+  const loadMessages = useCallback(async () => {
+    if (!groupId) return
+
+    setMessagesError(null)
+    setIsLoadingMessages(true)
+
+    try {
+      const messageItems = await messageGroupeService.listMessages(groupId)
+      setMessages(messageItems)
+    } catch (error) {
+      console.warn(error)
+      setMessages([])
+      setMessagesError(toErrorMessage(error, 'Impossible de charger les messages.'))
+    } finally {
+      setIsLoadingMessages(false)
+    }
+  }, [groupId])
+
   useFocusEffect(
     useCallback(() => {
       let isMounted = true
@@ -108,11 +151,31 @@ export default function GroupeDetailScreen() {
         setMembers([])
         setMemberProfiles({})
       })
+      loadMessages()
 
       return () => {
         isMounted = false
       }
-    }, [loadGroupContext]),
+    }, [loadGroupContext, loadMessages]),
+  )
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!groupId) return undefined
+
+      const unsubscribe = messageGroupeService.subscribeToNewMessages(
+        groupId,
+        (message) => {
+          setMessages((currentMessages) =>
+            appendMessageUnique(currentMessages, message),
+          )
+        },
+      )
+
+      return () => {
+        unsubscribe()
+      }
+    }, [groupId]),
   )
 
   async function addMember() {
@@ -271,6 +334,37 @@ export default function GroupeDetailScreen() {
     }
   }
 
+  async function sendMessage() {
+    const trimmedMessage = messageText.trim()
+
+    setMessagesError(null)
+
+    if (!groupId) {
+      setMessagesError('Identifiant de groupe manquant.')
+      return
+    }
+
+    if (!trimmedMessage) return
+
+    setIsSendingMessage(true)
+
+    try {
+      const createdMessage = await messageGroupeService.createMessage(
+        groupId,
+        trimmedMessage,
+      )
+
+      setMessages((currentMessages) =>
+        appendMessageUnique(currentMessages, createdMessage),
+      )
+      setMessageText('')
+    } catch (error) {
+      setMessagesError(toErrorMessage(error, 'Impossible d’envoyer ce message.'))
+    } finally {
+      setIsSendingMessage(false)
+    }
+  }
+
   const displayedGroupName = groupe?.name ?? groupName
   const canManageGroup = canManageGroupByRole(
     groupe,
@@ -321,19 +415,78 @@ export default function GroupeDetailScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.messagesArea} />
+      <ScrollView
+        contentContainerStyle={styles.messagesContent}
+        showsVerticalScrollIndicator={false}
+        style={styles.messagesArea}
+      >
+        {isLoadingMessages ? (
+          <Text style={styles.messagesMeta}>Chargement des messages...</Text>
+        ) : null}
 
-      <View style={styles.composer}>
-        <TextInput
-          multiline
-          placeholder="Message"
-          placeholderTextColor={colors.outline}
-          style={styles.input}
-        />
-        <Pressable style={styles.sendButton}>
-          <Text style={styles.sendButtonText}>➤</Text>
-        </Pressable>
-      </View>
+        {!isLoadingMessages && messages.length === 0 ? (
+          <Text style={styles.messagesMeta}>
+            Aucun message pour le moment.
+          </Text>
+        ) : null}
+
+        {messages.map((message) => {
+          const isOwnMessage = message.userId === currentUserId
+          const profile = memberProfiles[message.userId]
+
+          return (
+            <View
+              key={message.id}
+              style={[
+                styles.messageBubble,
+                isOwnMessage && styles.ownMessageBubble,
+              ]}
+            >
+              <Text style={styles.messageAuthor}>
+                {getProfileName(profile, message.userId)}
+              </Text>
+              <Text style={styles.messageContent}>{message.contenu}</Text>
+              <Text style={styles.messageTime}>
+                {formatMessageTime(message.createdAt)}
+              </Text>
+            </View>
+          )
+        })}
+
+        {messagesError ? (
+          <Text style={styles.errorText}>{messagesError}</Text>
+        ) : null}
+      </ScrollView>
+
+      {canManageGroup ? (
+        <View style={styles.composer}>
+          <TextInput
+            multiline
+            onChangeText={setMessageText}
+            placeholder="Message"
+            placeholderTextColor={colors.outline}
+            style={styles.input}
+            value={messageText}
+          />
+          <Pressable
+            disabled={isSendingMessage || !messageText.trim()}
+            onPress={sendMessage}
+            style={[
+              styles.sendButton,
+              (isSendingMessage || !messageText.trim()) &&
+                styles.disabledButton,
+            ]}
+          >
+            <Text style={styles.sendButtonText}>➤</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.readOnlyComposer}>
+          <Text style={styles.readOnlyComposerText}>
+            Seuls les créateurs et administrateurs peuvent écrire ici.
+          </Text>
+        </View>
+      )}
 
       <Modal
         animationType="slide"
@@ -582,6 +735,47 @@ const styles = StyleSheet.create({
   messagesArea: {
     flex: 1,
   },
+  messagesContent: {
+    gap: 10,
+    padding: 14,
+  },
+  messagesMeta: {
+    color: colors.onSurfaceVariant,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+  messageBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surfaceContainerLowest,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+    maxWidth: '86%',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  ownMessageBubble: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.secondaryFixed,
+  },
+  messageAuthor: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  messageContent: {
+    color: colors.onSurface,
+    fontSize: 15,
+    lineHeight: 21,
+  },
+  messageTime: {
+    alignSelf: 'flex-end',
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    fontWeight: '700',
+  },
   composer: {
     alignItems: 'flex-end',
     backgroundColor: colors.surfaceContainerLowest,
@@ -590,6 +784,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     padding: 12,
+  },
+  readOnlyComposer: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderTopColor: colors.surfaceContainerHigh,
+    borderTopWidth: 1,
+    padding: 12,
+  },
+  readOnlyComposerText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    textAlign: 'center',
   },
   input: {
     backgroundColor: colors.surfaceContainer,

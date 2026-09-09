@@ -1,11 +1,14 @@
 import { predicationService } from '@/composition/predication'
+import { profilService } from '@/composition/profil'
 import type { PredicationModel } from '@/domain/entités/Predication'
+import { canManagePredications } from '@/domain/entités/Profil'
 import { colors } from '@/shared/theme/colors'
-import { useFocusEffect } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 export default function HomeScreen() {
+  const [canCreateAnnonce, setCanCreateAnnonce] = useState(false)
   const [predications, setPredications] = useState<PredicationModel[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -13,6 +16,18 @@ export default function HomeScreen() {
     useCallback(() => {
       let isMounted = true
       setIsLoading(true)
+
+      profilService
+        .getCurrentUserProfileOrThrow()
+        .then((profile) => {
+          if (!isMounted) return
+          setCanCreateAnnonce(canManagePredications(profile.roleApp))
+        })
+        .catch((error) => {
+          if (!isMounted) return
+          console.warn(error)
+          setCanCreateAnnonce(false)
+        })
 
       predicationService
         .listPredications()
@@ -47,6 +62,15 @@ export default function HomeScreen() {
         <View>
           <Text style={styles.title}>Bonjour,</Text>
         </View>
+
+        {canCreateAnnonce ? (
+          <Pressable
+            onPress={() => router.push('/create-annonce' as never)}
+            style={styles.createButton}
+          >
+            <Text style={styles.createButtonText}>Créer une annonce</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <View style={styles.sermonCard}>
@@ -84,6 +108,8 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
   },
   header: {
+    alignItems: 'flex-start',
+    gap: 12,
     paddingTop: 8,
   },
   title: {
@@ -100,6 +126,19 @@ const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     fontSize: 13,
     fontWeight: '600',
+  },
+  createButton: {
+    alignItems: 'center',
+    backgroundColor: colors.primaryContainer,
+    borderRadius: 8,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  createButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   sermonCard: {
     backgroundColor: colors.surfaceContainerLowest,
