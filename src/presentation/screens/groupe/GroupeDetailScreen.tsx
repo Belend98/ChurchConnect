@@ -442,11 +442,28 @@ export default function GroupeDetailScreen() {
                 isOwnMessage && styles.ownMessageBubble,
               ]}
             >
-              <Text style={styles.messageAuthor}>
+              <Text
+                style={[
+                  styles.messageAuthor,
+                  isOwnMessage && styles.ownMessageAuthor,
+                ]}
+              >
                 {getProfileName(profile, message.userId)}
               </Text>
-              <Text style={styles.messageContent}>{message.contenu}</Text>
-              <Text style={styles.messageTime}>
+              <Text
+                style={[
+                  styles.messageContent,
+                  isOwnMessage && styles.ownMessageContent,
+                ]}
+              >
+                {message.contenu}
+              </Text>
+              <Text
+                style={[
+                  styles.messageTime,
+                  isOwnMessage && styles.ownMessageTime,
+                ]}
+              >
                 {formatMessageTime(message.createdAt)}
               </Text>
             </View>
@@ -670,8 +687,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLowest,
-    borderBottomColor: colors.surfaceContainerHigh,
+    backgroundColor: colors.primary,
+    borderBottomColor: colors.primary,
     borderBottomWidth: 1,
     flexDirection: 'row',
     gap: 10,
@@ -685,13 +702,13 @@ const styles = StyleSheet.create({
     width: 32,
   },
   backButtonText: {
-    color: colors.primary,
+    color: '#ffffff',
     fontSize: 34,
     lineHeight: 36,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: colors.secondaryFixed,
+    backgroundColor: colors.surfaceContainerLowest,
     borderRadius: 22,
     height: 44,
     justifyContent: 'center',
@@ -707,8 +724,8 @@ const styles = StyleSheet.create({
   },
   headerIconButton: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainer,
-    borderColor: colors.surfaceContainerHigh,
+    backgroundColor: 'rgba(255, 250, 241, 0.14)',
+    borderColor: 'rgba(255, 250, 241, 0.24)',
     borderRadius: 20,
     borderWidth: 1,
     height: 40,
@@ -716,18 +733,18 @@ const styles = StyleSheet.create({
     width: 40,
   },
   headerIconText: {
-    color: colors.primary,
+    color: '#ffffff',
     fontSize: 22,
     fontWeight: '900',
     lineHeight: 25,
   },
   title: {
-    color: colors.primary,
+    color: '#ffffff',
     fontSize: 18,
     fontWeight: '900',
   },
   subtitle: {
-    color: colors.onSurfaceVariant,
+    color: '#dce8f7',
     fontSize: 12,
     fontWeight: '700',
     marginTop: 2,
@@ -737,7 +754,7 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     gap: 10,
-    padding: 14,
+    padding: 16,
   },
   messagesMeta: {
     color: colors.onSurfaceVariant,
@@ -752,29 +769,39 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     gap: 4,
-    maxWidth: '86%',
+    maxWidth: '84%',
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   ownMessageBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: colors.secondaryFixed,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   messageAuthor: {
     color: colors.primary,
     fontSize: 12,
     fontWeight: '900',
   },
+  ownMessageAuthor: {
+    color: '#dce8f7',
+  },
   messageContent: {
     color: colors.onSurface,
     fontSize: 15,
     lineHeight: 21,
+  },
+  ownMessageContent: {
+    color: '#ffffff',
   },
   messageTime: {
     alignSelf: 'flex-end',
     color: colors.onSurfaceVariant,
     fontSize: 11,
     fontWeight: '700',
+  },
+  ownMessageTime: {
+    color: '#dce8f7',
   },
   composer: {
     alignItems: 'flex-end',
@@ -783,7 +810,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     flexDirection: 'row',
     gap: 10,
-    padding: 12,
+    padding: 14,
   },
   readOnlyComposer: {
     backgroundColor: colors.surfaceContainerLowest,

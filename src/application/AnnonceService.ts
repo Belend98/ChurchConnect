@@ -30,4 +30,8 @@ export class AnnonceService {
       createdBy: userId,
     })
   }
+
+  listAnnonces(): Promise<AnnonceModel[]> {
+    return this.annonceRepository.list()
+  }
 }

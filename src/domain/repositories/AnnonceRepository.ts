@@ -5,4 +5,5 @@ import type {
 
 export interface AnnonceRepository {
   create(data: CreateAnnonceModel): Promise<AnnonceModel>
+  list(): Promise<AnnonceModel[]>
 }

@@ -408,8 +408,6 @@ export default function PredicationScreen() {
 
     return matchesCategory && matchesSearch
   })
-  const firstPredication = filteredPredications[0]
-
   return (
     <ScrollView
       contentContainerStyle={styles.content}
@@ -418,6 +416,7 @@ export default function PredicationScreen() {
     >
       <View style={styles.header}>
         <View>
+          <Text style={styles.eyebrow}>Médiathèque spirituelle</Text>
           <Text style={styles.title}>Prédications</Text>
         </View>
         {canManagePredicationItems ? (
@@ -430,24 +429,25 @@ export default function PredicationScreen() {
         ) : null}
       </View>
 
-      {canManagePredicationItems ? (
-        <Pressable
-          onPress={() => setIsCategoryModalOpen(true)}
-          style={styles.manageButton}
-        >
-          <Text style={styles.manageButtonText}>Catégories</Text>
-        </Pressable>
-      ) : null}
-
-      <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>⌕</Text>
-        <TextInput
-          onChangeText={setSearchQuery}
-          placeholder="Rechercher par titre ou catégorie..."
-          placeholderTextColor={colors.outline}
-          style={styles.searchInput}
-          value={searchQuery}
-        />
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
+          <Text style={styles.searchIcon}>⌕</Text>
+          <TextInput
+            onChangeText={setSearchQuery}
+            placeholder="Thème, titre, catégorie..."
+            placeholderTextColor={colors.outline}
+            style={styles.searchInput}
+            value={searchQuery}
+          />
+        </View>
+        {canManagePredicationItems ? (
+          <Pressable
+            onPress={() => setIsCategoryModalOpen(true)}
+            style={styles.filterButton}
+          >
+            <Text style={styles.filterButtonText}>≡</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <ScrollView
@@ -470,29 +470,14 @@ export default function PredicationScreen() {
                 selectedCategoryId === filter.id && styles.filterTextActive,
               ]}
             >
+              {selectedCategoryId === filter.id ? (
+                <Text style={styles.filterCheck}>✓</Text>
+              ) : null}
               {filter.nom}
             </Text>
           </Pressable>
         ))}
       </ScrollView>
-
-      {firstPredication ? (
-        <Pressable
-          onPress={() => openPlayer(firstPredication)}
-          style={styles.resumeCard}
-        >
-          <View>
-            <Text style={styles.resumeLabel}>Dernière prédication</Text>
-            <Text style={styles.resumeTitle}>{firstPredication.title}</Text>
-            <Text style={styles.resumeMeta}>
-              {getCategoryName(firstPredication.categorieId)}
-            </Text>
-          </View>
-          <View style={styles.resumeButton}>
-            <Text style={styles.resumeButtonText}>▶</Text>
-          </View>
-        </Pressable>
-      ) : null}
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Toutes les prédications</Text>
@@ -648,30 +633,44 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    alignSelf: 'center',
     gap: 16,
+    maxWidth: 520,
     padding: 20,
-    paddingBottom: 36,
+    paddingBottom: 96,
+    width: '100%',
   },
   header: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingTop: 8,
+  },
+  eyebrow: {
+    color: colors.secondary,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
   },
   title: {
     color: colors.primary,
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
+    lineHeight: 36,
   },
   sortButton: {
-    backgroundColor: colors.primary,
+    alignItems: 'center',
+    backgroundColor: colors.secondary,
     borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 16,
   },
   sortButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   manageButton: {
     alignSelf: 'flex-start',
@@ -686,50 +685,77 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  searchRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
   searchBox: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainerLowest,
     borderColor: colors.surfaceContainerHigh,
     borderRadius: 8,
     borderWidth: 1,
+    flex: 1,
     flexDirection: 'row',
     gap: 10,
-    minHeight: 54,
-    paddingHorizontal: 16,
+    minHeight: 50,
+    paddingHorizontal: 14,
   },
   searchIcon: {
     color: colors.onSurfaceVariant,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
   },
   searchInput: {
     color: colors.onSurface,
     flex: 1,
     fontSize: 15,
-    minHeight: 54,
+    minHeight: 50,
   },
-  filterList: {
-    gap: 10,
-    paddingRight: 20,
-  },
-  filterPill: {
+  filterButton: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLowest,
     borderColor: colors.surfaceContainerHigh,
     borderRadius: 8,
     borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    height: 50,
+    justifyContent: 'center',
+    width: 50,
+  },
+  filterButtonText: {
+    color: colors.primary,
+    fontSize: 24,
+    fontWeight: '900',
+    lineHeight: 27,
+  },
+  filterList: {
+    gap: 8,
+    paddingRight: 18,
+  },
+  filterPill: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: 20,
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 15,
   },
   filterPillActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
     borderColor: colors.primary,
   },
   filterText: {
     color: colors.onSurface,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '800',
   },
   filterTextActive: {
     color: '#ffffff',
+  },
+  filterCheck: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
   },
   resumeCard: {
     alignItems: 'center',
@@ -775,19 +801,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 2,
+    paddingHorizontal: 2,
   },
   sectionTitle: {
     color: colors.primary,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 19,
+    fontWeight: '800',
   },
   sectionMeta: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 8,
     color: colors.onSurfaceVariant,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   sermonList: {
-    gap: 12,
+    gap: 14,
   },
   emptyCard: {
     backgroundColor: colors.surfaceContainerLowest,

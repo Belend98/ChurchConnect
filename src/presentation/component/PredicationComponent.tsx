@@ -1,6 +1,6 @@
 import type { PredicationModel } from '@/domain/entités/Predication'
 import { colors } from '@/shared/theme/colors'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 
 type PredicationComponentProps = {
   canManagePredication?: boolean
@@ -35,6 +35,17 @@ function formatDate(date: Date): string {
   }).format(date)
 }
 
+function getThumbnailUrl(predicationId: string): string {
+  const thumbnails = [
+    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=500&q=80',
+    'https://images.unsplash.com/photo-1473177104440-ffee2f376098?auto=format&fit=crop&w=500&q=80',
+    'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=crop&w=500&q=80',
+  ]
+  const index = predicationId.charCodeAt(0) % thumbnails.length
+
+  return thumbnails[index]
+}
+
 export function PredicationComponent({
   canManagePredication = false,
   categoryName,
@@ -53,54 +64,58 @@ export function PredicationComponent({
 }: PredicationComponentProps) {
   return (
     <View style={styles.card}>
+      <View style={styles.topLine}>
+        <View style={styles.badges}>
+          <Text style={styles.serie}>{categoryName ?? 'Prédication'}</Text>
+          <Text style={styles.mediaBadge}>Audio</Text>
+        </View>
+        <Pressable
+          disabled={isFavoriting}
+          onPress={() => onToggleFavorite(predication)}
+          style={styles.favoriteIconButton}
+        >
+          <Text
+            style={[
+              styles.favoriteIcon,
+              isFavorite && styles.favoriteIconActive,
+            ]}
+          >
+            {isFavorite ? '★' : '☆'}
+          </Text>
+        </Pressable>
+      </View>
+
       <View style={styles.main}>
-        <View style={styles.info}>
-          <View style={styles.metaLine}>
-            <Text style={styles.serie}>{categoryName ?? 'Prédication'}</Text>
-            <Text style={styles.date}>{formatDate(predication.createdAt)}</Text>
-            <Text style={styles.date}>
-              {formatDuration(predication.durationSeconds)}
-            </Text>
+        <Pressable
+          onPress={() => onListen(predication)}
+          style={styles.thumbnailWrap}
+        >
+          <Image
+            source={{ uri: getThumbnailUrl(predication.id) }}
+            style={styles.thumbnail}
+          />
+          <View style={styles.thumbnailOverlay}>
+            <Text style={styles.thumbnailPlay}>▶</Text>
           </View>
+        </Pressable>
+
+        <View style={styles.info}>
           <Text style={styles.title}>{predication.title}</Text>
-          <Text numberOfLines={1} style={styles.mediaUrl}>
-            {predication.mediaUrl}
+          <Text style={styles.verse}>{categoryName ?? 'Prédication'}</Text>
+          <Text numberOfLines={1} style={styles.date}>
+            {formatDate(predication.createdAt)}
           </Text>
         </View>
       </View>
 
       <View style={styles.actions}>
-        <View style={styles.primaryActions}>
-          <Pressable
-            onPress={() => onListen(predication)}
-            style={styles.listenButton}
-          >
-            <Text style={styles.listenButtonText}>Écouter</Text>
-          </Pressable>
-          {canManagePredication ? (
-            <>
-              <Pressable
-                onPress={() => onEdit(predication)}
-                style={styles.editButton}
-              >
-                <Text style={styles.editButtonText}>Modifier</Text>
-              </Pressable>
-              <Pressable
-                disabled={isDeleting}
-                onPress={() => onDelete(predication)}
-                style={[
-                  styles.deleteButton,
-                  isDeleting && styles.disabledButton,
-                ]}
-              >
-                <Text style={styles.deleteButtonText}>
-                  {isDeleting ? '...' : 'Supprimer'}
-                </Text>
-              </Pressable>
-            </>
-          ) : null}
+        <View style={styles.duration}>
+          <Text style={styles.durationText}>
+            {formatDuration(predication.durationSeconds)}
+          </Text>
         </View>
-        <View style={styles.lightActions}>
+
+        <View style={styles.actionButtons}>
           <Pressable
             disabled={isLiking}
             onPress={() => onToggleLike(predication)}
@@ -110,25 +125,32 @@ export function PredicationComponent({
               {likes} ♥
             </Text>
           </Pressable>
+
           <Pressable
-            disabled={isFavoriting}
-            onPress={() => onToggleFavorite(predication)}
-            style={[
-              styles.favoriteButton,
-              isFavorite && styles.favoriteButtonActive,
-            ]}
+            onPress={() => onListen(predication)}
+            style={styles.listenButton}
           >
-            <Text
-              style={[
-                styles.favoriteButtonText,
-                isFavorite && styles.favoriteButtonTextActive,
-              ]}
-            >
-              {isFavorite ? 'Favori ✓' : 'Favori'}
-            </Text>
+            <Text style={styles.listenButtonText}>Écouter</Text>
           </Pressable>
         </View>
       </View>
+
+      {canManagePredication ? (
+        <View style={styles.manageActions}>
+          <Pressable onPress={() => onEdit(predication)} style={styles.editButton}>
+            <Text style={styles.editButtonText}>Modifier</Text>
+          </Pressable>
+          <Pressable
+            disabled={isDeleting}
+            onPress={() => onDelete(predication)}
+            style={[styles.deleteButton, isDeleting && styles.disabledButton]}
+          >
+            <Text style={styles.deleteButtonText}>
+              {isDeleting ? '...' : 'Supprimer'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   )
 }
@@ -140,26 +162,89 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     gap: 12,
+    overflow: 'hidden',
     padding: 14,
   },
-  main: {
+  topLine: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  badges: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  main: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  thumbnailWrap: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 8,
+    height: 82,
+    overflow: 'hidden',
+    width: 82,
+  },
+  thumbnail: {
+    height: '100%',
+    width: '100%',
+  },
+  thumbnailOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(29, 53, 87, 0.28)',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  thumbnailPlay: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '900',
   },
   info: {
     flex: 1,
-    gap: 5,
-  },
-  metaLine: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: 4,
   },
   serie: {
+    backgroundColor: colors.secondaryFixed,
+    borderRadius: 8,
     color: colors.primary,
-    flexShrink: 1,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '800',
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  mediaBadge: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 8,
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '800',
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  favoriteIconButton: {
+    alignItems: 'center',
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  favoriteIcon: {
+    color: colors.onSurfaceVariant,
+    fontSize: 23,
+    lineHeight: 25,
+  },
+  favoriteIconActive: {
+    color: colors.secondary,
   },
   date: {
     color: colors.onSurfaceVariant,
@@ -167,26 +252,34 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.primary,
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     lineHeight: 25,
   },
-  mediaUrl: {
-    color: colors.onSurfaceVariant,
+  verse: {
+    color: colors.secondary,
     fontSize: 13,
-    lineHeight: 19,
+    fontWeight: '800',
   },
   actions: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'space-between',
-  },
-  primaryActions: {
     alignItems: 'center',
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  duration: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  durationText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  actionButtons: {
+    alignItems: 'center',
+    flexDirection: 'row',
     gap: 8,
   },
   listenButton: {
@@ -201,6 +294,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  manageActions: {
+    borderTopColor: colors.surfaceContainer,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 12,
   },
   editButton: {
     alignItems: 'center',
@@ -232,11 +332,6 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.55,
   },
-  lightActions: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-  },
   likeButton: {
     borderColor: colors.surfaceContainerHigh,
     borderRadius: 8,
@@ -254,23 +349,5 @@ const styles = StyleSheet.create({
   },
   likesActive: {
     color: colors.secondary,
-  },
-  favoriteButton: {
-    borderColor: colors.surfaceContainerHigh,
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  favoriteButtonActive: {
-    borderColor: colors.primary,
-  },
-  favoriteButtonText: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  favoriteButtonTextActive: {
-    color: colors.primary,
   },
 })

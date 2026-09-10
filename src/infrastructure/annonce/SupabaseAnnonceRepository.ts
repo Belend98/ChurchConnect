@@ -10,7 +10,7 @@ type AnnonceRow = {
   titre: string
   contenu: string
   image_url: string | null
-  created_by: string
+  created_by: string | null
   created_at: string
   updated_at: string | null
 }
@@ -24,7 +24,7 @@ function mapAnnonce(row: AnnonceRow): AnnonceModel {
     titre: row.titre,
     contenu: row.contenu,
     imageUrl: row.image_url ?? undefined,
-    createdBy: row.created_by,
+    createdBy: row.created_by ?? undefined,
     createdAt: new Date(row.created_at),
     updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
   }
@@ -46,5 +46,16 @@ export class SupabaseAnnonceRepository implements AnnonceRepository {
     if (error) throw error
 
     return mapAnnonce(annonce as AnnonceRow)
+  }
+
+  async list(): Promise<AnnonceModel[]> {
+    const { data, error } = await supabase
+      .from('annonce')
+      .select(ANNONCE_SELECT)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return ((data ?? []) as AnnonceRow[]).map(mapAnnonce)
   }
 }

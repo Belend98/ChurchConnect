@@ -58,7 +58,10 @@ export default function GroupeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Mes groupes</Text>
+          <View>
+            <Text style={styles.eyebrow}>Communauté</Text>
+            <Text style={styles.title}>Mes groupes</Text>
+          </View>
           <Pressable onPress={openCreateGroupe} style={styles.headerButton}>
             <Text style={styles.headerButtonText}>Créer</Text>
           </Pressable>
@@ -96,9 +99,10 @@ export default function GroupeScreen() {
                 </Text>
 
                 <Text style={styles.groupMeta}>
-                  {group.createdBy ? 'Groupe créé par un membre' : 'Groupe'}
+                  {group.createdBy ? 'Groupe actif' : 'Groupe'}
                 </Text>
               </View>
+              <Text style={styles.groupArrow}>›</Text>
             </Pressable>
           ))}
         </View>
@@ -123,64 +127,86 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    alignSelf: 'center',
     gap: 16,
+    maxWidth: 520,
     padding: 20,
-    paddingBottom: 36,
+    paddingBottom: 96,
+    width: '100%',
   },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingTop: 8,
+  },
+  eyebrow: {
+    color: colors.secondary,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
   },
   title: {
     color: colors.primary,
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
+    lineHeight: 36,
   },
   headerButton: {
     alignItems: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: colors.secondary,
     borderRadius: 8,
     justifyContent: 'center',
-    minHeight: 40,
-    paddingHorizontal: 14,
+    minHeight: 48,
+    paddingHorizontal: 16,
   },
   headerButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   meta: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 8,
     color: colors.onSurfaceVariant,
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: '800',
+    overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
   },
   groupList: {
     backgroundColor: colors.surfaceContainerLowest,
     borderColor: colors.surfaceContainerHigh,
     borderRadius: 8,
     borderWidth: 1,
-    overflow: 'hidden',
+    gap: 10,
+    padding: 10,
   },
   groupRow: {
     alignItems: 'center',
-    borderBottomColor: colors.surfaceContainerHigh,
-    borderBottomWidth: 1,
+    backgroundColor: colors.surfaceContainer,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
     padding: 14,
   },
   groupAvatar: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 18,
-    height: 36,
+    backgroundColor: colors.primary,
+    borderRadius: 22,
+    height: 44,
     justifyContent: 'center',
-    width: 36,
+    width: 44,
   },
   groupInitial: {
-    color: colors.primary,
-    fontSize: 15,
-    fontWeight: '700',
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '900',
   },
   groupBody: {
     flex: 1,
@@ -195,8 +221,8 @@ const styles = StyleSheet.create({
   groupName: {
     color: colors.primary,
     flex: 1,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
   },
   groupTime: {
     color: colors.onSurfaceVariant,
@@ -208,8 +234,14 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   groupMeta: {
-    color: colors.onSurfaceVariant,
+    color: colors.secondary,
     fontSize: 12,
+    fontWeight: '800',
+  },
+  groupArrow: {
+    color: colors.primary,
+    fontSize: 28,
+    fontWeight: '700',
   },
   emptyCard: {
     backgroundColor: colors.surfaceContainerLowest,

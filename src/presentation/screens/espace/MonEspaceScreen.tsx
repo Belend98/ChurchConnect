@@ -131,6 +131,7 @@ export default function MonEspaceScreen() {
     >
       <View style={styles.header}>
         <View>
+          <Text style={styles.eyebrow}>Profil</Text>
           <Text style={styles.title}>Bienvenue, {displayName}</Text>
         </View>
       </View>
@@ -256,25 +257,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    alignSelf: 'center',
     gap: 16,
+    maxWidth: 520,
     padding: 20,
-    paddingBottom: 36,
+    paddingBottom: 96,
+    width: '100%',
   },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 14,
     justifyContent: 'space-between',
+    paddingTop: 8,
+  },
+  eyebrow: {
+    color: colors.secondary,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0,
+    textTransform: 'uppercase',
   },
   title: {
     color: colors.primary,
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: '800',
     lineHeight: 34,
   },
   profileCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderColor: colors.surfaceContainerHigh,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
     borderRadius: 8,
     borderWidth: 1,
     gap: 16,
@@ -287,7 +299,7 @@ const styles = StyleSheet.create({
   },
   profileAvatar: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainer,
+    backgroundColor: colors.surfaceContainerLowest,
     borderRadius: 26,
     height: 52,
     justifyContent: 'center',
@@ -303,24 +315,29 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   profileName: {
-    color: colors.primary,
+    color: '#ffffff',
     fontSize: 21,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   profileMeta: {
-    color: colors.onSurfaceVariant,
+    color: '#dce8f7',
     fontSize: 13,
   },
   profileRole: {
     alignSelf: 'flex-start',
-    color: colors.primary,
+    backgroundColor: colors.secondary,
+    borderRadius: 8,
+    color: '#ffffff',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '900',
     marginTop: 2,
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   secondaryButton: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainer,
+    backgroundColor: colors.surfaceContainerLowest,
     borderRadius: 8,
     minHeight: 46,
     justifyContent: 'center',
@@ -347,9 +364,9 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   statValue: {
-    color: colors.primary,
+    color: colors.secondary,
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   statLabel: {
     color: colors.onSurfaceVariant,
@@ -366,11 +383,17 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.primary,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   sectionMeta: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 8,
     color: colors.onSurfaceVariant,
     fontSize: 12,
+    fontWeight: '800',
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
   favoriteRow: {
     alignItems: 'center',
@@ -385,14 +408,14 @@ const styles = StyleSheet.create({
   },
   favoriteIcon: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainer,
+    backgroundColor: colors.secondaryFixed,
     borderRadius: 16,
     height: 32,
     justifyContent: 'center',
     width: 32,
   },
   favoriteIconText: {
-    color: colors.primary,
+    color: colors.secondary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -443,12 +466,13 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   linkArrow: {
-    color: colors.onSurfaceVariant,
+    color: colors.secondary,
     fontSize: 28,
     fontWeight: '700',
   },
   signOutButton: {
     alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLowest,
     borderColor: colors.error,
     borderRadius: 8,
     borderWidth: 1,

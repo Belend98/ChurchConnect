@@ -3,7 +3,7 @@ export interface AnnonceModel {
   titre: string
   contenu: string
   imageUrl?: string
-  createdBy: string
+  createdBy?: string
   createdAt: Date
   updatedAt?: Date
 }
