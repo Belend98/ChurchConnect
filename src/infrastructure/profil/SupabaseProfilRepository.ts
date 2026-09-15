@@ -14,6 +14,7 @@ type ProfilRow = {
   nom: string | null
   prenom: string | null
   bio: string | null
+  image_url: string | null
   date_naissance: string | null
   created_at: string
   role_app: string | null
@@ -21,7 +22,7 @@ type ProfilRow = {
 }
 
 const PROFIL_SELECT =
-  'id, username, nom, prenom, bio, date_naissance, created_at, role_app, is_admin'
+  'id, username, nom, prenom, bio, image_url, date_naissance, created_at, role_app, is_admin'
 
 function toAppRole(role: string | null): AppRole {
   if (APP_ROLES.includes(role as AppRole)) return role as AppRole
@@ -38,6 +39,7 @@ function mapProfil(data: ProfilRow): ProfilModel {
     nom: data.nom ?? undefined,
     prenom: data.prenom ?? undefined,
     bio: data.bio ?? undefined,
+    imageUrl: data.image_url ?? undefined,
     dateNaissance: data.date_naissance
       ? new Date(data.date_naissance)
       : undefined,
@@ -56,6 +58,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
         nom: data.nom ?? null,
         prenom: data.prenom ?? null,
         bio: data.bio ?? null,
+        image_url: data.imageUrl ?? null,
         date_naissance: data.dateNaissance?.toISOString() ?? null,
         role_app: data.roleApp ?? (data.isAdmin ? 'admin' : DEFAULT_APP_ROLE),
         is_admin: data.isAdmin ?? false,
@@ -116,6 +119,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
         nom: data.nom ?? null,
         prenom: data.prenom ?? null,
         bio: data.bio ?? null,
+        image_url: data.imageUrl ?? null,
         date_naissance: data.dateNaissance?.toISOString() ?? null,
         ...(data.roleApp !== undefined ? { role_app: data.roleApp } : {}),
         ...(data.isAdmin !== undefined ? { is_admin: data.isAdmin } : {}),

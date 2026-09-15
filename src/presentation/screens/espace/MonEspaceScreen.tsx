@@ -10,6 +10,7 @@ import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -138,9 +139,16 @@ export default function MonEspaceScreen() {
 
       <View style={styles.profileCard}>
         <View style={styles.profileTop}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>{avatarInitial}</Text>
-          </View>
+          {profile?.imageUrl ? (
+            <Image
+              source={{ uri: profile.imageUrl }}
+              style={styles.profileAvatarImage}
+            />
+          ) : (
+            <View style={styles.profileAvatar}>
+              <Text style={styles.profileAvatarText}>{avatarInitial}</Text>
+            </View>
+          )}
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{displayName}</Text>
             <Text numberOfLines={1} style={styles.profileMeta}>
@@ -303,6 +311,11 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     height: 52,
     justifyContent: 'center',
+    width: 52,
+  },
+  profileAvatarImage: {
+    borderRadius: 26,
+    height: 52,
     width: 52,
   },
   profileAvatarText: {

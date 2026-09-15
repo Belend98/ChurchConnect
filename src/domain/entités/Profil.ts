@@ -22,6 +22,7 @@ export interface ProfilModel {
   nom?: string
   prenom?: string
   bio?: string
+  imageUrl?: string
   dateNaissance?: Date
   roleApp: AppRole
   /**

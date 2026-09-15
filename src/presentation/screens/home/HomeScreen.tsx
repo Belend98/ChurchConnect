@@ -184,59 +184,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Dernière prédication</Text>
-          <Text style={styles.sectionMeta}>
-            {isLoading ? 'Chargement' : `${predications.length} total`}
-          </Text>
-        </View>
-
-        <View style={styles.sermonCard}>
-          <View style={styles.sermonMedia}>
-            <Image
-              source={{ uri: DEFAULT_SERMON_IMAGE_URL }}
-              style={styles.sermonImage}
-            />
-            <View style={styles.sermonImageShade} />
-            <View style={styles.sermonMediaTop}>
-              <Text style={styles.sermonBadge}>Audio</Text>
-              <Text style={styles.sermonDuration}>Prédication</Text>
-            </View>
-            <Text style={styles.sermonMediaDate}>
-              {isLoading ? 'Chargement' : `${predications.length} total`}
-            </Text>
-          </View>
-
-          <View style={styles.sermonBody}>
-            <Text style={styles.sermonKicker}>Message récent</Text>
-          {latestPredication ? (
-            <>
-              <Text style={styles.sermonTitle}>{latestPredication.title}</Text>
-                <Text style={styles.sermonSubtitle}>
-                {latestPredication.categorieId ?? 'Prédication'}
-              </Text>
-                <Pressable
-                  onPress={() =>
-                    router.push(
-                      {
-                        pathname: '/predication-player',
-                        params: { id: latestPredication.id },
-                      } as never,
-                    )
-                  }
-                  style={styles.listenButton}
-                >
-                  <Text style={styles.listenButtonText}>Écouter</Text>
-                </Pressable>
-            </>
-          ) : (
-              <Text style={styles.sermonSubtitle}>
-              Aucune prédication enregistrée pour le moment.
-            </Text>
-          )}
-          </View>
-        </View>
-
-        <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Annonces</Text>
           <Text style={styles.sectionMeta}>
             {isLoadingAnnonces ? 'Chargement' : `${annonces.length} total`}
@@ -310,6 +257,61 @@ export default function HomeScreen() {
               </View>
             </View>
           ) : null}
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Dernière prédication</Text>
+          <Text style={styles.sectionMeta}>
+            {isLoading ? 'Chargement' : `${predications.length} total`}
+          </Text>
+        </View>
+
+        <View style={styles.sermonCard}>
+          <View style={styles.sermonMedia}>
+            <Image
+              source={{ uri: DEFAULT_SERMON_IMAGE_URL }}
+              style={styles.sermonImage}
+            />
+            <View style={styles.sermonImageShade} />
+            <View style={styles.sermonMediaTop}>
+              <Text style={styles.sermonBadge}>Audio</Text>
+              <Text style={styles.sermonDuration}>Prédication</Text>
+            </View>
+            <Text style={styles.sermonMediaDate}>
+              {isLoading ? 'Chargement' : `${predications.length} total`}
+            </Text>
+          </View>
+
+          <View style={styles.sermonBody}>
+            <Text style={styles.sermonKicker}>Message récent</Text>
+            {latestPredication ? (
+              <>
+                <Text style={styles.sermonTitle}>
+                  {latestPredication.title}
+                </Text>
+                <Text style={styles.sermonSubtitle}>
+                  {latestPredication.categorieId ?? 'Prédication'}
+                </Text>
+                <Pressable
+                  onPress={() =>
+                    router.push(
+                      {
+                        pathname: '/predication-player',
+                        params: { id: latestPredication.id },
+                      } as never,
+                    )
+                  }
+                  style={styles.listenButton}
+                >
+                  <Text style={styles.listenButtonText}>Écouter</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Text style={styles.sermonSubtitle}>
+                Aucune prédication enregistrée pour le moment.
+              </Text>
+            )}
+          </View>
         </View>
       </ScrollView>
 

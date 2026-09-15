@@ -1,14 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native'
 import { authService } from '@/composition/Auth'
 import { colors } from '@/shared/theme/colors'
@@ -18,6 +20,7 @@ import {
   type CreateUserInput,
 } from '@/domain/rules/userSchema'
 import { profilService } from '@/composition/profil'
+import { useImageFilePicker } from '@/presentation/hooks/useImageFilePicker'
 
 type SupabaseLikeError = {
   code?: string
@@ -49,6 +52,7 @@ const ProfileSetupScreen = () => {
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateUserFormInput, unknown, CreateUserInput>({
     resolver: zodResolver(createUserSchema),
@@ -62,6 +66,42 @@ const ProfileSetupScreen = () => {
   })
 
   const [errorText, setErrorText] = useState<string | null>(null)
+  const [existingImageUrl, setExistingImageUrl] = useState<string | undefined>()
+  const {
+    clearImagePickerError,
+    imagePickerError,
+    pickImageFile,
+    selectedImage,
+  } = useImageFilePicker()
+
+  useEffect(() => {
+    let isMounted = true
+
+    authService
+      .getCurrentUser()
+      .then(async (user) => {
+        if (!user) return null
+        return profilService.getMyProfile(user.id)
+      })
+      .then((profile) => {
+        if (!isMounted || !profile) return
+
+        setValue('username', profile.username ?? '')
+        setValue('nom', profile.nom ?? '')
+        setValue('prenom', profile.prenom ?? '')
+        setValue('bio', profile.bio ?? '')
+        setValue(
+          'dateNaissance',
+          profile.dateNaissance?.toISOString().slice(0, 10) ?? '',
+        )
+        setExistingImageUrl(profile.imageUrl)
+      })
+      .catch((error) => console.warn(error))
+
+    return () => {
+      isMounted = false
+    }
+  }, [setValue])
 
   const handleSignOut = async () => {
     try {
@@ -74,6 +114,7 @@ const ProfileSetupScreen = () => {
 
   const onSubmit = async (data: CreateUserInput) => {
     setErrorText(null)
+    clearImagePickerError()
 
     const user = await authService.getCurrentUser()
 
@@ -84,8 +125,26 @@ const ProfileSetupScreen = () => {
     }
 
     try {
-      await profilService.createProfile(user.id, data)
-      Alert.alert('Profil crée', 'Ton profil est pret.')
+      if (selectedImage) {
+        const response = await fetch(selectedImage.uri)
+        const image = await response.arrayBuffer()
+
+        await profilService.createProfileWithImage(user.id, {
+          ...data,
+          imageFile: {
+            contentType: selectedImage.contentType,
+            fileName: selectedImage.fileName,
+            image,
+          },
+        })
+      } else {
+        await profilService.createProfile(user.id, {
+          ...data,
+          imageUrl: existingImageUrl,
+        })
+      }
+
+      Alert.alert('Profil enregistré', 'Ton profil est pret.')
       router.replace('../(tabs)/home')
     } catch (error) {
       setErrorText(toReadableProfileError(error))
@@ -99,6 +158,37 @@ const ProfileSetupScreen = () => {
     >
       <Text style={styles.title}>Complète ton profil</Text>
       <Text style={styles.subtitle}>Ajoute quelques infos avant de continuer.</Text>
+
+      <Text style={styles.label}>Photo de profil</Text>
+      <View style={styles.imagePickerBox}>
+        {selectedImage?.uri || existingImageUrl ? (
+          <Image
+            source={{ uri: selectedImage?.uri ?? existingImageUrl }}
+            style={styles.profileImage}
+          />
+        ) : (
+          <View style={styles.profileImagePlaceholder}>
+            <Text style={styles.profileImagePlaceholderText}>Photo</Text>
+          </View>
+        )}
+        <View style={styles.imagePickerInfo}>
+          <Text style={styles.imagePickerTitle}>
+            {selectedImage ? selectedImage.fileName : 'Aucune image choisie'}
+          </Text>
+          <Text style={styles.imagePickerMeta}>
+            {selectedImage
+              ? `${selectedImage.contentType}${
+                  selectedImage.size
+                    ? ` · ${Math.round(selectedImage.size / 1024)} Ko`
+                    : ''
+                }`
+              : 'JPG, PNG ou autre image'}
+          </Text>
+        </View>
+        <Pressable onPress={pickImageFile} style={styles.imagePickerButton}>
+          <Text style={styles.imagePickerButtonText}>Choisir</Text>
+        </Pressable>
+      </View>
 
       <Text style={styles.label}>Nom d&apos;utilisateur</Text>
       <Controller
@@ -186,14 +276,18 @@ const ProfileSetupScreen = () => {
         <Text style={styles.errorText}>{errors.dateNaissance.message}</Text>
       )}
 
-      {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+      {errorText || imagePickerError ? (
+        <Text style={styles.errorText}>{errorText ?? imagePickerError}</Text>
+      ) : null}
 
       <Pressable
         onPress={handleSubmit(onSubmit)}
         style={[styles.button, isSubmitting ? styles.buttonDisabled : undefined]}
         disabled={isSubmitting}
       >
-        <Text style={styles.buttonText}>{isSubmitting ? 'Creation...' : 'Creer mon profil'}</Text>
+        <Text style={styles.buttonText}>
+          {isSubmitting ? 'Enregistrement...' : 'Enregistrer mon profil'}
+        </Text>
       </Pressable>
 
       <Pressable onPress={handleSignOut} style={styles.signOutButton}>
@@ -239,6 +333,60 @@ const styles = StyleSheet.create({
   multiline: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  imagePickerBox: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLowest,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 12,
+  },
+  profileImage: {
+    borderRadius: 26,
+    height: 52,
+    width: 52,
+  },
+  profileImagePlaceholder: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 26,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  profileImagePlaceholderText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  imagePickerInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  imagePickerTitle: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  imagePickerMeta: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+  },
+  imagePickerButton: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 14,
+  },
+  imagePickerButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
   },
   button: {
     marginTop: 16,
