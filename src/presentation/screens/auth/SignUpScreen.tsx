@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native'
 
 const SignUpScreen = () => {
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignUpInput>({
@@ -35,7 +35,12 @@ const SignUpScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      style={styles.screen}
+    >
       <Text style={styles.title}>Créer un compte</Text>
       <Text style={styles.subtitle}>Entre ton email et ton mot de passe.</Text>
 
@@ -109,18 +114,21 @@ const SignUpScreen = () => {
       <Pressable onPress={() => router.replace('/(auth)/signin')} style={styles.linkButton}>
         <Text style={styles.linkText}>Déja un compte ? Se connecter</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   )
 }
 
 export default SignUpScreen
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
+    backgroundColor: colors.background,
     flex: 1,
+  },
+  container: {
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: colors.background,
   },
   title: {
     fontSize: 28,

@@ -108,6 +108,7 @@ export default function CreatePredicationScreen() {
     return (
       <ScrollView
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         style={styles.screen}
       >
@@ -135,6 +136,7 @@ export default function CreatePredicationScreen() {
   return (
     <ScrollView
       contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       style={styles.screen}
     >

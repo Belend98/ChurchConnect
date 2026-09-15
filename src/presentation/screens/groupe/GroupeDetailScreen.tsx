@@ -20,6 +20,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import {
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -512,7 +513,11 @@ export default function GroupeDetailScreen() {
         visible={isAddMemberOpen}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalKeyboardAvoidingView}
+          >
+            <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Ajouter un membre</Text>
               <Pressable onPress={() => setIsAddMemberOpen(false)}>
@@ -549,7 +554,8 @@ export default function GroupeDetailScreen() {
                 {isAddingMember ? 'Ajout...' : 'Ajouter au groupe'}
               </Text>
             </Pressable>
-          </View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -560,7 +566,11 @@ export default function GroupeDetailScreen() {
         visible={isSettingsOpen}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.settingsCard}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalKeyboardAvoidingView}
+          >
+            <View style={styles.settingsCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Paramètres</Text>
               <Pressable onPress={() => setIsSettingsOpen(false)}>
@@ -570,6 +580,7 @@ export default function GroupeDetailScreen() {
 
             <ScrollView
               contentContainerStyle={styles.settingsContent}
+              keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
               {canManageGroup ? (
@@ -673,7 +684,8 @@ export default function GroupeDetailScreen() {
                 </Pressable>
               )}
             </ScrollView>
-          </View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
@@ -855,6 +867,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(3, 31, 65, 0.42)',
     flex: 1,
     justifyContent: 'flex-end',
+  },
+  modalKeyboardAvoidingView: {
+    width: '100%',
   },
   modalCard: {
     backgroundColor: colors.surfaceContainerLowest,
