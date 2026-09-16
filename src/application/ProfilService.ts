@@ -50,6 +50,10 @@ export class ProfilService {
     return this.profilRepository.getProfile(userId)
   }
 
+  listCommunityMembers(limit?: number) {
+    return this.profilRepository.listCommunityMembers(limit)
+  }
+
   listProfilesByIds(ids: string[]) {
     return this.profilRepository.listByIds(ids)
   }

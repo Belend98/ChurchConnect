@@ -1,8 +1,11 @@
+import { useSupabaseAuthRedirect } from '@/presentation/hooks/auth/useSupabaseAuthRedirect'
 import { Stack } from 'expo-router'
 import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 
 export default function RootLayout() {
+  useSupabaseAuthRedirect()
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -14,6 +17,7 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" />
+            <Stack.Screen name="auth-callback" />
             <Stack.Screen name="create-annonce" />
             <Stack.Screen name="create-groupe" />
             <Stack.Screen name="groupe-detail" />

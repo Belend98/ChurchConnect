@@ -60,8 +60,8 @@ export class SupabaseProfilRepository implements ProfilRepository {
         bio: data.bio ?? null,
         image_url: data.imageUrl ?? null,
         date_naissance: data.dateNaissance?.toISOString() ?? null,
-        role_app: data.roleApp ?? (data.isAdmin ? 'admin' : DEFAULT_APP_ROLE),
-        is_admin: data.isAdmin ?? false,
+        ...(data.roleApp !== undefined ? { role_app: data.roleApp } : {}),
+        ...(data.isAdmin !== undefined ? { is_admin: data.isAdmin } : {}),
       },
       {
         onConflict: 'id',
@@ -95,6 +95,23 @@ export class SupabaseProfilRepository implements ProfilRepository {
     if (!data) return null
 
     return mapProfil(data as ProfilRow)
+  }
+
+  async listCommunityMembers(limit?: number): Promise<ProfilModel[]> {
+    let query = supabase
+      .from('user_profil')
+      .select(PROFIL_SELECT)
+      .order('created_at', { ascending: false })
+
+    if (limit !== undefined) {
+      query = query.limit(limit)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    return ((data ?? []) as ProfilRow[]).map(mapProfil)
   }
 
   async listByIds(ids: string[]): Promise<ProfilModel[]> {

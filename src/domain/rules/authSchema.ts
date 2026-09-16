@@ -12,7 +12,10 @@ export const signInSchema = baseSignSchema
 
 export const signUpSchema = baseSignSchema.extend({
   confirmPassword: z
-    .string()
+    .string(),
+  rgpdConsent: z.boolean().refine((value) => value, {
+    message: 'Tu dois accepter le traitement de tes donnees personnelles.',
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Les mots de passe ne correspondent pas',
   path: ['confirmPassword'],

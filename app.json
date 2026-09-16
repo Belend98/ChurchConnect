@@ -12,6 +12,7 @@
       "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
+      "favicon": "./assets/favicon.png",
       "output": "static"
     },
     "plugins": [

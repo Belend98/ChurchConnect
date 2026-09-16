@@ -1,6 +1,8 @@
 import type { User } from '@supabase/supabase-js'
 import type { AuthUser } from '@/domain/entités/AuthUser'
 import type { AuthResult, AuthRepository } from '@/domain/repositories/AuthRepository'
+import * as Linking from 'expo-linking'
+import { Platform } from 'react-native'
 import { supabase } from '../supabase/client'
 
 function mapUser(user: User | null): AuthUser | null {
@@ -12,9 +14,23 @@ function mapUser(user: User | null): AuthUser | null {
   }
 }
 
+function getEmailRedirectTo() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return `${window.location.origin}/`
+  }
+
+  return Linking.createURL('auth-callback')
+}
+
 export class SupabaseAuthRepository implements AuthRepository {
   async signUp(email: string, password: string): Promise<AuthResult> {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      options: {
+        emailRedirectTo: getEmailRedirectTo(),
+      },
+      password,
+    })
 
     if (error) throw error
 

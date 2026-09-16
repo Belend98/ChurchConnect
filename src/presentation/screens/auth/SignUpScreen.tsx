@@ -6,12 +6,17 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
 const SignUpScreen = () => {
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+      rgpdConsent: false,
+    },
   })
   const [errorText, setErrorText] = useState<string | null>(null)
 
@@ -101,6 +106,30 @@ const SignUpScreen = () => {
       />
       {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>}
 
+      <Controller
+        control={control}
+        name="rgpdConsent"
+        render={({ field: { onChange, value } }) => (
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: value }}
+            onPress={() => onChange(!value)}
+            style={styles.consentRow}
+          >
+            <View style={[styles.checkbox, value ? styles.checkboxChecked : undefined]}>
+              {value ? <Text style={styles.checkboxMark}>✓</Text> : null}
+            </View>
+            <Text style={styles.consentText}>
+              J&apos;accepte que les données personnelles concernées par cette demande
+              soient traitées par Church Connect pour la finalité qui m&apos;a été
+              présentée. Je reconnais avoir pu consulter la politique de
+              confidentialité et avoir été informé de mes droits.
+            </Text>
+          </Pressable>
+        )}
+      />
+      {errors.rgpdConsent && <Text style={styles.errorText}>{errors.rgpdConsent.message}</Text>}
+
       {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
       <Pressable
@@ -154,6 +183,39 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 14,
     backgroundColor: colors.surfaceContainerLowest,
+  },
+  consentRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+    marginTop: 2,
+  },
+  checkbox: {
+    alignItems: 'center',
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 4,
+    borderWidth: 1,
+    height: 22,
+    justifyContent: 'center',
+    marginTop: 2,
+    width: 22,
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkboxMark: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+    lineHeight: 18,
+  },
+  consentText: {
+    color: colors.onSurfaceVariant,
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
   },
   button: {
     marginTop: 4,

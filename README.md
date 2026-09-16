@@ -1,56 +1,195 @@
-# Welcome to your Expo app 👋
+# Church Connect
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Church Connect est une application mobile développée avec Expo, React Native et Supabase.
 
-## Get started
+## Technologies utilisées
 
-1. Install dependencies
+- Expo
+- React Native
+- TypeScript
+- Expo Router
+- Supabase
+- React Hook Form
+- Zod
+
+## Prérequis
+
+Avant d'installer le projet, il faut avoir :
+
+- Node.js installé ;
+- npm installé ;
+- Expo disponible via les commandes npm/npx ;
+- un projet Supabase configuré ;
+- les variables d'environnement nécessaires au fonctionnement de l'application.
+
+## Installation du projet
+
+1. Cloner ou récupérer le projet sur la machine.
+
+2. Se placer dans le dossier du projet :
+
+   ```bash
+   cd churchConnect
+   ```
+
+3. Installer les dépendances :
 
    ```bash
    npm install
    ```
 
-2. Start the app
+4. Créer un fichier `.env` à la racine du projet.
 
-   ```bash
-   npx expo start
+5. Ajouter les variables d'environnement nécessaires :
+
+   ```env
+   EXPO_PUBLIC_SUPABASE_URL=
+   EXPO_PUBLIC_SUPABASE_KEY=
+   EXPO_PUBLIC_SUPABASE_PREDICATION_AUDIO_BUCKET=
    ```
 
-In the output, you'll find options to open the app in a
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Configuration de Supabase
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+L'application utilise Supabase pour :
 
-## Get a fresh project
+- l'authentification ;
+- la base de données ;
+- les politiques RLS ;
+- les notifications internes ;
+- le stockage des images et des fichiers audio ;
+- la gestion des profils, groupes, annonces et prédications.
 
-When you're ready, run:
+Les migrations SQL du projet se trouvent dans le dossier :
 
-```bash
-npm run reset-project
+```text
+supabase/migrations
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Elles doivent être appliquées sur la base Supabase afin de créer ou mettre à jour les tables, fonctions, triggers, buckets et politiques de sécurité nécessaires.
 
-### Other setup steps
+## Lancement de l'application
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Pour lancer le serveur de développement Expo :
 
-## Learn more
+```bash
+npm run start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Pour lancer directement la version Android :
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npm run android
+```
 
-## Join the community
+Pour lancer directement la version iOS :
 
-Join our community of developers creating universal apps.
+```bash
+npm run ios
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Pour lancer la version web :
+
+```bash
+npm run web
+```
+
+## Vérification du code
+
+Pour lancer la vérification du code avec ESLint :
+
+```bash
+npm run lint
+```
+
+## Utilisation de l'application
+
+### Création de compte et connexion
+
+Un utilisateur peut créer un compte, se connecter, puis compléter ou modifier son profil.
+
+Le profil contient notamment les informations personnelles de l'utilisateur, son image de profil et son rôle dans l'application.
+
+### Accueil
+
+L'écran d'accueil présente les contenus principaux de l'application, notamment les annonces et les informations utiles à la communauté.
+
+### Annonces
+
+Les annonces permettent de diffuser des informations importantes aux utilisateurs.
+
+Selon les permissions configurées, seuls certains rôles peuvent créer, modifier ou supprimer des annonces.
+
+### Prédications
+
+La section des prédications permet de consulter les messages disponibles.
+
+Les utilisateurs peuvent écouter une prédication, consulter ses informations et gérer leurs favoris.
+
+La création, la modification et la suppression des prédications sont réservées aux utilisateurs autorisés.
+
+### Groupes
+
+La section des groupes permet aux utilisateurs d'accéder aux groupes auxquels ils appartiennent.
+
+Les membres peuvent consulter les informations du groupe et participer aux échanges selon les règles d'accès définies.
+
+Le créateur ou les administrateurs d'un groupe peuvent gérer certains paramètres et membres du groupe.
+
+### Notifications
+
+L'application dispose d'un système de notifications internes.
+
+Les notifications peuvent être générées lors de certains événements, comme :
+
+- la publication d'une annonce ;
+- l'envoi d'un message dans un groupe ;
+- l'ajout ou l'invitation d'un utilisateur dans un groupe.
+
+### Mon espace
+
+L'écran personnel de l'utilisateur permet de consulter son profil, ses statistiques, ses groupes, ses favoris et les accès rapides vers les principales fonctionnalités.
+
+## Rôles et permissions
+
+L'application distingue plusieurs niveaux d'accès :
+
+- membre ;
+- administrateur ;
+- pasteur.
+
+Les permissions sont contrôlées côté application et côté base de données grâce aux politiques RLS de Supabase.
+
+Les membres disposent principalement de droits de consultation et d'utilisation des fonctionnalités courantes.
+
+Les administrateurs et le pasteur disposent de permissions supplémentaires pour gérer certains contenus sensibles, comme les annonces, les prédications, les catégories et certains fichiers.
+
+## Structure du projet
+
+```text
+app/
+src/
+supabase/
+assets/
+```
+
+Le dossier `app` contient les routes Expo Router.
+
+Le dossier `src` contient le code principal de l'application, organisé par couches :
+
+- `application` pour les services applicatifs ;
+- `composition` pour l'assemblage des dépendances ;
+- `domain` pour les entités, règles et interfaces ;
+- `infrastructure` pour les implémentations Supabase et Storage ;
+- `presentation` pour les écrans, composants et hooks ;
+- `shared` pour les éléments communs.
+
+Le dossier `supabase` contient les migrations liées à la base de données et à la sécurité.
+
+## Rapport d'utilisation de l'IA
+
+Le rapport d'utilisation de l'intelligence artificielle est disponible dans le fichier :
+
+```text
+IA_REPORT.md
+```

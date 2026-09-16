@@ -4,7 +4,11 @@ import { predicationService } from '@/composition/predication'
 import { profilService } from '@/composition/profil'
 import type { AnnonceModel } from '@/domain/entités/Annonce'
 import type { PredicationModel } from '@/domain/entités/Predication'
-import { canManagePredications } from '@/domain/entités/Profil'
+import {
+  canManagePredications,
+  getAppRoleLabel,
+  type ProfilModel,
+} from '@/domain/entités/Profil'
 import { colors } from '@/shared/theme/colors'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
@@ -24,14 +28,22 @@ function getGreetingName(profileName: string | null) {
   return profileName ? `Bonjour, ${profileName}` : 'Bonjour,'
 }
 
+function getMemberDisplayName(member: ProfilModel) {
+  const fullName = [member.prenom, member.nom].filter(Boolean).join(' ')
+
+  return fullName || member.username || 'Membre'
+}
+
 export default function HomeScreen() {
   const [annonces, setAnnonces] = useState<AnnonceModel[]>([])
   const [currentAnnonceIndex, setCurrentAnnonceIndex] = useState(0)
   const [canCreateAnnonce, setCanCreateAnnonce] = useState(false)
+  const [communityMembers, setCommunityMembers] = useState<ProfilModel[]>([])
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0)
   const [profileName, setProfileName] = useState<string | null>(null)
   const [predications, setPredications] = useState<PredicationModel[]>([])
   const [isLoadingAnnonces, setIsLoadingAnnonces] = useState(true)
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
 
   useFocusEffect(
@@ -39,6 +51,7 @@ export default function HomeScreen() {
       let isMounted = true
       setIsLoading(true)
       setIsLoadingAnnonces(true)
+      setIsLoadingMembers(true)
 
       profilService
         .getCurrentUserProfileOrThrow()
@@ -83,6 +96,21 @@ export default function HomeScreen() {
         })
         .finally(() => {
           if (isMounted) setIsLoadingAnnonces(false)
+        })
+
+      profilService
+        .listCommunityMembers()
+        .then((members) => {
+          if (!isMounted) return
+          setCommunityMembers(members)
+        })
+        .catch((error) => {
+          if (!isMounted) return
+          console.warn(error)
+          setCommunityMembers([])
+        })
+        .finally(() => {
+          if (isMounted) setIsLoadingMembers(false)
         })
 
       return () => {
@@ -257,6 +285,50 @@ export default function HomeScreen() {
               </View>
             </View>
           ) : null}
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Membres de la communauté</Text>
+          <Text style={styles.sectionMeta}>
+            {isLoadingMembers ? 'Chargement' : `${communityMembers.length} visibles`}
+          </Text>
+        </View>
+
+        <View style={styles.membersCard}>
+          {!isLoadingMembers && communityMembers.length === 0 ? (
+            <Text style={styles.sermonSubtitle}>
+              Aucun membre trouvé pour le moment.
+            </Text>
+          ) : null}
+
+          {communityMembers.map((member) => {
+            const memberName = getMemberDisplayName(member)
+
+            return (
+              <View key={member.id} style={styles.memberRow}>
+                {member.imageUrl ? (
+                  <Image
+                    source={{ uri: member.imageUrl }}
+                    style={styles.memberAvatarImage}
+                  />
+                ) : (
+                  <View style={styles.memberAvatar}>
+                    <Text style={styles.memberAvatarText}>
+                      {memberName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.memberInfo}>
+                  <Text numberOfLines={1} style={styles.memberName}>
+                    {memberName}
+                  </Text>
+                  <Text numberOfLines={1} style={styles.memberMeta}>
+                    @{member.username ?? 'profil'} · {getAppRoleLabel(member.roleApp)}
+                  </Text>
+                </View>
+              </View>
+            )
+          })}
         </View>
 
         <View style={styles.sectionHeader}>
@@ -681,6 +753,53 @@ const styles = StyleSheet.create({
   activeDot: {
     backgroundColor: colors.secondary,
     width: 18,
+  },
+  membersCard: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderColor: colors.surfaceContainerHigh,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12,
+  },
+  memberRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 54,
+  },
+  memberAvatar: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  memberAvatarImage: {
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: 22,
+    height: 44,
+    width: 44,
+  },
+  memberAvatarText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  memberInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  memberName: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  memberMeta: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '600',
   },
   floatingButton: {
     alignItems: 'center',
