@@ -19,56 +19,127 @@ Avant d'installer le projet, il faut avoir :
 - Node.js installé ;
 - npm installé ;
 - Expo disponible via les commandes npm/npx ;
-- un projet Supabase configuré ;
-- les variables d'environnement nécessaires au fonctionnement de l'application.
+- Git installé ;
+- un compte Supabase.
 
 ## Installation du projet
 
-1. Cloner ou récupérer le projet sur la machine.
+### 1. Récupérer le projet depuis GitHub
 
-2. Se placer dans le dossier du projet :
+Cloner le dépôt sur la machine :
 
-   ```bash
-   cd churchConnect
-   ```
-
-3. Installer les dépendances :
-
-   ```bash
-   npm install
-   ```
-
-4. Créer un fichier `.env` à la racine du projet.
-
-5. Ajouter les variables d'environnement nécessaires :
-
-   ```env
-   EXPO_PUBLIC_SUPABASE_URL=
-   EXPO_PUBLIC_SUPABASE_KEY=
-   EXPO_PUBLIC_SUPABASE_PREDICATION_AUDIO_BUCKET=
-   ```
+```bash
+git clone <url-du-repository-github>
+```
 
 
-## Configuration de Supabase
 
-L'application utilise Supabase pour :
+### 2. Créer le projet Supabase
 
-- l'authentification ;
-- la base de données ;
-- les politiques RLS ;
-- les notifications internes ;
-- le stockage des images et des fichiers audio ;
-- la gestion des profils, groupes, annonces et prédications.
+Créer un nouveau projet depuis le tableau de bord Supabase :
 
-Les migrations SQL du projet se trouvent dans le dossier :
+1. Se connecter à Supabase.
+2. Créer un nouveau projet.
+3. Choisir le nom du projet, le mot de passe de base de données et la région.
+4. Attendre que Supabase termine l'initialisation du projet.
+
+Le projet Supabase doit être vide au départ. La structure de la base sera créée
+avec les migrations SQL du dépôt.
+
+### 3. Récupérer les clés Supabase
+
+Dans le tableau de bord Supabase :
+
+1. Ouvrir le projet.
+2. Aller dans `Project Settings`.
+3. Aller dans `API`.
+4. Copier la valeur `Project URL`.
+5. Copier la clé publique `anon` ou `publishable`.
+
+La clé à utiliser dans l'application est la clé publique.
+
+### 4. Configurer le fichier `.env`
+
+Créer un fichier `.env` à la racine du projet, ou partir d'un fichier déjà
+préparé avec les placeholders suivants :
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=<project-url-supabase>
+EXPO_PUBLIC_SUPABASE_KEY=<cle-publique-anon-ou-publishable>
+EXPO_PUBLIC_SUPABASE_IMAGE_BUCKET=church-images
+EXPO_PUBLIC_SUPABASE_PREDICATION_AUDIO_BUCKET=predications-audio
+```
+
+Remplacer uniquement les placeholders Supabase :
+
+- `<project-url-supabase>` par la valeur `Project URL` ;
+- `<cle-publique-anon-ou-publishable>` par la clé publique Supabase.
+
+Les noms de buckets doivent rester identiques, car ils sont utilisés par le code
+et par les policies Storage.
+
+### 5. Migrer la structure des tables
+
+Les migrations SQL se trouvent dans :
 
 ```text
 supabase/migrations
 ```
 
-Elles doivent être appliquées sur la base Supabase afin de créer ou mettre à jour les tables, fonctions, triggers, buckets et politiques de sécurité nécessaires.
+Commencer par exécuter la migration de création des tables :
 
-## Lancement de l'application
+```text
+supabase/migrations/20260904090000_create_core_tables.sql
+```
+
+Cette migration crée les tables principales :
+
+- `user_profil` ;
+- `categorie_predication` ;
+- `predication` ;
+- `predication_favorites` ;
+- `predication_likes` ;
+- `groupe` ;
+- `groupe_membre` ;
+- `annonce` ;
+- `message_groupe` ;
+- `notification`.
+
+Elle peut être exécutée depuis le SQL Editor Supabase.
+
+### 6. Migrer les règles RLS et les policies
+
+Après la création des tables, exécuter la migration des policies :
+
+```text
+supabase/migrations/20260916100000_policies_by_table.sql
+```
+
+Cette migration active Row Level Security et crée les policies par table.
+Elle contient aussi les fonctions SQL utilisées par les règles d'accès.
+
+### 7. Créer les buckets Storage
+
+Dans Supabase Storage, vérifier que les buckets suivants existent :
+
+```text
+church-images
+predications-audio
+```
+
+Si les buckets n'existent pas encore, les créer en public depuis l'interface
+Supabase Storage, ou exécuter les migrations du dossier `supabase/migrations`
+qui créent les buckets.
+
+### 8. Installer les dépendances
+
+Installer les dépendances Node.js :
+
+```bash
+npm install
+```
+
+### 9. Lancer l'application
 
 Pour lancer le serveur de développement Expo :
 
@@ -93,6 +164,26 @@ Pour lancer la version web :
 ```bash
 npm run web
 ```
+
+## Configuration de Supabase
+
+L'application utilise Supabase pour :
+
+- l'authentification ;
+- la base de données ;
+- les politiques RLS ;
+- les notifications internes ;
+- le stockage des images et des fichiers audio ;
+- la gestion des profils, groupes, annonces et prédications.
+
+Les migrations SQL du projet se trouvent dans le dossier :
+
+```text
+supabase/migrations
+```
+
+Elles permettent de créer ou mettre à jour les tables, fonctions, triggers,
+buckets et politiques de sécurité nécessaires.
 
 ## Vérification du code
 
