@@ -67,10 +67,6 @@ export default function GroupeScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.meta}>
-          {isLoading ? 'Chargement' : `${groups.length} groupe(s)`}
-        </Text>
-
         <View style={styles.groupList}>
           {groups.map((group) => (
             <Pressable
@@ -165,17 +161,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '900',
-  },
-  meta: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 8,
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    alignSelf: 'flex-start',
   },
   groupList: {
     backgroundColor: colors.surfaceContainerLowest,

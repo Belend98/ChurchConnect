@@ -481,9 +481,6 @@ export default function PredicationScreen() {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Toutes les prédications</Text>
-        <Text style={styles.sectionMeta}>
-          {isLoading ? 'Chargement' : `${filteredPredications.length} messages`}
-        </Text>
       </View>
 
       <View style={styles.sermonList}>
@@ -807,16 +804,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 19,
     fontWeight: '800',
-  },
-  sectionMeta: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 8,
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
   },
   sermonList: {
     gap: 14,

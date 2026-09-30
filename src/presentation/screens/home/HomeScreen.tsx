@@ -21,13 +21,6 @@ import {
   View,
 } from 'react-native'
 
-const DEFAULT_SERMON_IMAGE_URL =
-  'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=1200&q=80'
-
-function getGreetingName(profileName: string | null) {
-  return profileName ? `Bonjour, ${profileName}` : 'Bonjour,'
-}
-
 function getMemberDisplayName(member: ProfilModel) {
   const fullName = [member.prenom, member.nom].filter(Boolean).join(' ')
 
@@ -44,12 +37,10 @@ export default function HomeScreen() {
   const [predications, setPredications] = useState<PredicationModel[]>([])
   const [isLoadingAnnonces, setIsLoadingAnnonces] = useState(true)
   const [isLoadingMembers, setIsLoadingMembers] = useState(true)
-  const [isLoading, setIsLoading] = useState(true)
 
   useFocusEffect(
     useCallback(() => {
       let isMounted = true
-      setIsLoading(true)
       setIsLoadingAnnonces(true)
       setIsLoadingMembers(true)
 
@@ -77,9 +68,6 @@ export default function HomeScreen() {
           if (!isMounted) return
           console.warn(error)
           setPredications([])
-        })
-        .finally(() => {
-          if (isMounted) setIsLoading(false)
         })
 
       annonceService
@@ -204,18 +192,8 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.header}>
-          <Text style={styles.title}>{getGreetingName(profileName)}</Text>
-          <Text style={styles.subtitle}>
-            Bienvenue dans l’espace de votre communauté
-          </Text>
-        </View>
-
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Annonces</Text>
-          <Text style={styles.sectionMeta}>
-            {isLoadingAnnonces ? 'Chargement' : `${annonces.length} total`}
-          </Text>
         </View>
 
         <View style={styles.annonceCard}>
@@ -289,9 +267,6 @@ export default function HomeScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Membres de la communauté</Text>
-          <Text style={styles.sectionMeta}>
-            {isLoadingMembers ? 'Chargement' : `${communityMembers.length} visibles`}
-          </Text>
         </View>
 
         <View style={styles.membersCard}>
@@ -331,36 +306,26 @@ export default function HomeScreen() {
           })}
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Dernière prédication</Text>
-          <Text style={styles.sectionMeta}>
-            {isLoading ? 'Chargement' : `${predications.length} total`}
-          </Text>
-        </View>
-
-        <View style={styles.sermonCard}>
-          <View style={styles.sermonMedia}>
-            <Image
-              source={{ uri: DEFAULT_SERMON_IMAGE_URL }}
-              style={styles.sermonImage}
-            />
-            <View style={styles.sermonImageShade} />
-            <View style={styles.sermonMediaTop}>
-              <Text style={styles.sermonBadge}>Audio</Text>
-              <Text style={styles.sermonDuration}>Prédication</Text>
+        {latestPredication ? (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Dernière prédication</Text>
             </View>
-            <Text style={styles.sermonMediaDate}>
-              {isLoading ? 'Chargement' : `${predications.length} total`}
-            </Text>
-          </View>
 
-          <View style={styles.sermonBody}>
-            <Text style={styles.sermonKicker}>Message récent</Text>
-            {latestPredication ? (
-              <>
-                <Text style={styles.sermonTitle}>
-                  {latestPredication.title}
-                </Text>
+            <View style={styles.sermonCard}>
+              <View style={styles.sermonMedia}>
+                <View style={styles.sermonIcon}>
+                  <Text style={styles.sermonIconText}>▶</Text>
+                </View>
+                <View style={styles.sermonMediaTop}>
+                  <Text style={styles.sermonBadge}>Audio</Text>
+                  <Text style={styles.sermonDuration}>Prédication</Text>
+                </View>
+              </View>
+
+              <View style={styles.sermonBody}>
+                <Text style={styles.sermonKicker}>Message récent</Text>
+                <Text style={styles.sermonTitle}>{latestPredication.title}</Text>
                 <Text style={styles.sermonSubtitle}>
                   {latestPredication.categorieId ?? 'Prédication'}
                 </Text>
@@ -377,14 +342,10 @@ export default function HomeScreen() {
                 >
                   <Text style={styles.listenButtonText}>Écouter</Text>
                 </Pressable>
-              </>
-            ) : (
-              <Text style={styles.sermonSubtitle}>
-                Aucune prédication enregistrée pour le moment.
-              </Text>
-            )}
-          </View>
-        </View>
+              </View>
+            </View>
+          </>
+        ) : null}
       </ScrollView>
 
       {canCreateAnnonce ? (
@@ -508,37 +469,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
   },
-  header: {
-    gap: 3,
-    paddingBottom: 6,
-    paddingTop: 4,
-  },
-  title: {
-    color: colors.primary,
-    fontSize: 28,
-    fontWeight: '800',
-    lineHeight: 36,
-  },
-  subtitle: {
-    color: colors.onSurfaceVariant,
-    fontSize: 14,
-    lineHeight: 21,
-  },
   sectionHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 2,
-  },
-  sectionMeta: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 8,
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
   },
   sectionTitle: {
     color: colors.primary,
@@ -553,22 +488,25 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   sermonMedia: {
+    alignItems: 'center',
     backgroundColor: colors.primary,
     height: 178,
+    justifyContent: 'center',
     overflow: 'hidden',
   },
-  sermonImage: {
-    height: '100%',
-    opacity: 0.82,
-    width: '100%',
+  sermonIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: 32,
+    height: 64,
+    justifyContent: 'center',
+    width: 64,
   },
-  sermonImageShade: {
-    backgroundColor: 'rgba(29, 53, 87, 0.42)',
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
+  sermonIconText: {
+    color: colors.primary,
+    fontSize: 25,
+    fontWeight: '900',
+    lineHeight: 30,
   },
   sermonMediaTop: {
     flexDirection: 'row',
@@ -597,14 +535,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingHorizontal: 10,
     paddingVertical: 6,
-  },
-  sermonMediaDate: {
-    bottom: 12,
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '800',
-    left: 12,
-    position: 'absolute',
   },
   sermonBody: {
     gap: 9,

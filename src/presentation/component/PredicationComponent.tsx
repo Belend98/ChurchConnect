@@ -1,6 +1,6 @@
 import type { PredicationModel } from '@/domain/entités/Predication'
 import { colors } from '@/shared/theme/colors'
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 type PredicationComponentProps = {
   canManagePredication?: boolean
@@ -33,17 +33,6 @@ function formatDate(date: Date): string {
     month: 'long',
     year: 'numeric',
   }).format(date)
-}
-
-function getThumbnailUrl(predicationId: string): string {
-  const thumbnails = [
-    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=500&q=80',
-    'https://images.unsplash.com/photo-1473177104440-ffee2f376098?auto=format&fit=crop&w=500&q=80',
-    'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=crop&w=500&q=80',
-  ]
-  const index = predicationId.charCodeAt(0) % thumbnails.length
-
-  return thumbnails[index]
 }
 
 export function PredicationComponent({
@@ -90,11 +79,7 @@ export function PredicationComponent({
           onPress={() => onListen(predication)}
           style={styles.thumbnailWrap}
         >
-          <Image
-            source={{ uri: getThumbnailUrl(predication.id) }}
-            style={styles.thumbnail}
-          />
-          <View style={styles.thumbnailOverlay}>
+          <View style={styles.thumbnailIcon}>
             <Text style={styles.thumbnailPlay}>▶</Text>
           </View>
         </Pressable>
@@ -183,30 +168,27 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   thumbnailWrap: {
+    alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
     borderRadius: 8,
     height: 82,
+    justifyContent: 'center',
     overflow: 'hidden',
     width: 82,
   },
-  thumbnail: {
-    height: '100%',
-    width: '100%',
-  },
-  thumbnailOverlay: {
+  thumbnailIcon: {
     alignItems: 'center',
-    backgroundColor: 'rgba(29, 53, 87, 0.28)',
-    bottom: 0,
+    backgroundColor: colors.primary,
+    borderRadius: 22,
+    height: 44,
     justifyContent: 'center',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
+    width: 44,
   },
   thumbnailPlay: {
     color: '#ffffff',
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: '900',
+    lineHeight: 23,
   },
   info: {
     flex: 1,
