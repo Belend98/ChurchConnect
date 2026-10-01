@@ -1,18 +1,21 @@
 import { annonceService } from '@/composition/annonce'
-import { notificationService } from '@/composition/notification'
-import { predicationService } from '@/composition/predication'
 import { profilService } from '@/composition/profil'
-import type { AnnonceModel } from '@/domain/entités/Annonce'
-import type { PredicationModel } from '@/domain/entités/Predication'
 import {
   canManagePredications,
   getAppRoleLabel,
   type ProfilModel,
 } from '@/domain/entités/Profil'
+import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
+import { useNotifications } from '@/presentation/hooks/notification/useNotifications'
+import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
+import { annoncesQueryKey } from '@/presentation/queries/annonceQueries'
 import { colors } from '@/shared/theme/colors'
+import { toErrorMessage } from '@/shared/utils/errors'
+import { useQuery } from '@tanstack/react-query'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -28,63 +31,32 @@ function getMemberDisplayName(member: ProfilModel) {
 }
 
 export default function HomeScreen() {
-  const [annonces, setAnnonces] = useState<AnnonceModel[]>([])
+  const userId = useCurrentUserId()
+  const {
+    data: annonces = [],
+    isPending: isLoadingAnnonces,
+    isError: isAnnoncesError,
+    error: annoncesError,
+    refetch: refetchAnnonces,
+  } = useQuery({
+    queryKey: annoncesQueryKey(userId),
+    queryFn: () => annonceService.listAnnonces(),
+    enabled: Boolean(userId),
+    staleTime: Infinity,
+    gcTime: Infinity,
+  })
   const [currentAnnonceIndex, setCurrentAnnonceIndex] = useState(0)
-  const [canCreateAnnonce, setCanCreateAnnonce] = useState(false)
+  const { data: profile, isError: isProfileError } = useCurrentProfile()
+  const canCreateAnnonce = !isProfileError && canManagePredications(profile?.roleApp)
+  const profileName = profile?.prenom ?? profile?.username ?? null
+  const { unreadCount: notificationUnreadCount } = useNotifications()
   const [communityMembers, setCommunityMembers] = useState<ProfilModel[]>([])
-  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0)
-  const [profileName, setProfileName] = useState<string | null>(null)
-  const [predications, setPredications] = useState<PredicationModel[]>([])
-  const [isLoadingAnnonces, setIsLoadingAnnonces] = useState(true)
   const [isLoadingMembers, setIsLoadingMembers] = useState(true)
 
   useFocusEffect(
     useCallback(() => {
       let isMounted = true
-      setIsLoadingAnnonces(true)
       setIsLoadingMembers(true)
-
-      profilService
-        .getCurrentUserProfileOrThrow()
-        .then((profile) => {
-          if (!isMounted) return
-          setProfileName(profile.prenom ?? profile.username ?? null)
-          setCanCreateAnnonce(canManagePredications(profile.roleApp))
-        })
-        .catch((error) => {
-          if (!isMounted) return
-          console.warn(error)
-          setProfileName(null)
-          setCanCreateAnnonce(false)
-        })
-
-      predicationService
-        .listPredications()
-        .then((predicationItems) => {
-          if (!isMounted) return
-          setPredications(predicationItems)
-        })
-        .catch((error) => {
-          if (!isMounted) return
-          console.warn(error)
-          setPredications([])
-        })
-
-      annonceService
-        .listAnnonces()
-        .then((annonceItems) => {
-          if (!isMounted) return
-          setAnnonces(annonceItems)
-          setCurrentAnnonceIndex(0)
-        })
-        .catch((error) => {
-          if (!isMounted) return
-          console.warn(error)
-          setAnnonces([])
-        })
-        .finally(() => {
-          if (isMounted) setIsLoadingAnnonces(false)
-        })
 
       profilService
         .listCommunityMembers()
@@ -107,43 +79,8 @@ export default function HomeScreen() {
     }, []),
   )
 
-  const refreshNotificationUnreadCount = useCallback(() => {
-    notificationService
-      .countUnreadForCurrentUser()
-      .then(setNotificationUnreadCount)
-      .catch((error) => {
-        console.warn(error)
-        setNotificationUnreadCount(0)
-      })
-  }, [])
-
-  useFocusEffect(
-    useCallback(() => {
-      let isMounted = true
-      let unsubscribe: (() => void) | undefined
-
-      refreshNotificationUnreadCount()
-
-      notificationService
-        .subscribeToMyNotifications(() => {
-          if (isMounted) refreshNotificationUnreadCount()
-        })
-        .then((unsubscribeNotification) => {
-          unsubscribe = unsubscribeNotification
-        })
-        .catch((error) => {
-          console.warn(error)
-        })
-
-      return () => {
-        isMounted = false
-        unsubscribe?.()
-      }
-    }, [refreshNotificationUnreadCount]),
-  )
-
-  const latestPredication = predications[0]
-  const currentAnnonce = annonces[currentAnnonceIndex]
+  const visibleAnnonceIndex = Math.min(currentAnnonceIndex, Math.max(annonces.length - 1, 0))
+  const currentAnnonce = annonces[visibleAnnonceIndex]
   const hasMultipleAnnonces = annonces.length > 1
 
   function goToAnnonce(index: number) {
@@ -165,7 +102,6 @@ export default function HomeScreen() {
               <Text style={styles.brandMarkText}>✝</Text>
             </View>
             <View style={styles.headerText}>
-              <Text style={styles.eyebrow}>Foi & Communauté</Text>
               <Text style={styles.appBarTitle}>Accueil</Text>
             </View>
           </View>
@@ -197,7 +133,20 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.annonceCard}>
-          {!isLoadingAnnonces && annonces.length === 0 ? (
+          {isLoadingAnnonces ? <ActivityIndicator color={colors.primary} /> : null}
+
+          {isAnnoncesError ? (
+            <View>
+              <Text style={styles.sermonSubtitle}>
+                {toErrorMessage(annoncesError, 'Impossible de charger les annonces.')}
+              </Text>
+              <Pressable onPress={() => void refetchAnnonces()}>
+                <Text style={styles.sermonSubtitle}>Réessayer</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {!isLoadingAnnonces && !isAnnoncesError && annonces.length === 0 ? (
             <Text style={styles.sermonSubtitle}>
               Aucune annonce pour le moment.
             </Text>
@@ -235,16 +184,16 @@ export default function HomeScreen() {
             <View style={styles.carouselFooter}>
               <View style={styles.carouselControls}>
                 <Pressable
-                  onPress={() => goToAnnonce(currentAnnonceIndex - 1)}
+                  onPress={() => goToAnnonce(visibleAnnonceIndex - 1)}
                   style={styles.carouselButton}
                 >
                   <Text style={styles.carouselButtonText}>‹</Text>
                 </Pressable>
                 <Text style={styles.scrollHint}>
-                  {currentAnnonceIndex + 1} / {annonces.length}
+                  {visibleAnnonceIndex + 1} / {annonces.length}
                 </Text>
                 <Pressable
-                  onPress={() => goToAnnonce(currentAnnonceIndex + 1)}
+                  onPress={() => goToAnnonce(visibleAnnonceIndex + 1)}
                   style={styles.carouselButton}
                 >
                   <Text style={styles.carouselButtonText}>›</Text>
@@ -256,7 +205,7 @@ export default function HomeScreen() {
                     key={annonce.id}
                     style={[
                       styles.dot,
-                      index === currentAnnonceIndex && styles.activeDot,
+                      index === visibleAnnonceIndex && styles.activeDot,
                     ]}
                   />
                 ))}
@@ -306,46 +255,6 @@ export default function HomeScreen() {
           })}
         </View>
 
-        {latestPredication ? (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Dernière prédication</Text>
-            </View>
-
-            <View style={styles.sermonCard}>
-              <View style={styles.sermonMedia}>
-                <View style={styles.sermonIcon}>
-                  <Text style={styles.sermonIconText}>▶</Text>
-                </View>
-                <View style={styles.sermonMediaTop}>
-                  <Text style={styles.sermonBadge}>Audio</Text>
-                  <Text style={styles.sermonDuration}>Prédication</Text>
-                </View>
-              </View>
-
-              <View style={styles.sermonBody}>
-                <Text style={styles.sermonKicker}>Message récent</Text>
-                <Text style={styles.sermonTitle}>{latestPredication.title}</Text>
-                <Text style={styles.sermonSubtitle}>
-                  {latestPredication.categorieId ?? 'Prédication'}
-                </Text>
-                <Pressable
-                  onPress={() =>
-                    router.push(
-                      {
-                        pathname: '/predication-player',
-                        params: { id: latestPredication.id },
-                      } as never,
-                    )
-                  }
-                  style={styles.listenButton}
-                >
-                  <Text style={styles.listenButtonText}>Écouter</Text>
-                </Pressable>
-              </View>
-            </View>
-          </>
-        ) : null}
       </ScrollView>
 
       {canCreateAnnonce ? (
@@ -480,95 +389,10 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '800',
   },
-  sermonCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderColor: colors.surfaceContainerHigh,
-    borderRadius: 8,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  sermonMedia: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    height: 178,
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  sermonIcon: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 32,
-    height: 64,
-    justifyContent: 'center',
-    width: 64,
-  },
-  sermonIconText: {
-    color: colors.primary,
-    fontSize: 25,
-    fontWeight: '900',
-    lineHeight: 30,
-  },
-  sermonMediaTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    left: 12,
-    position: 'absolute',
-    right: 12,
-    top: 12,
-  },
-  sermonBadge: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 8,
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  sermonDuration: {
-    backgroundColor: 'rgba(29, 53, 87, 0.86)',
-    borderRadius: 8,
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '900',
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  sermonBody: {
-    gap: 9,
-    padding: 16,
-  },
-  sermonKicker: {
-    color: colors.secondary,
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  sermonTitle: {
-    color: colors.primary,
-    fontSize: 22,
-    fontWeight: '800',
-    lineHeight: 30,
-  },
   sermonSubtitle: {
     color: colors.onSurfaceVariant,
     fontSize: 14,
     lineHeight: 21,
-  },
-  listenButton: {
-    alignItems: 'center',
-    backgroundColor: colors.primaryContainer,
-    borderRadius: 8,
-    height: 48,
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  listenButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
   },
   annonceCard: {
     backgroundColor: colors.surfaceContainerLowest,

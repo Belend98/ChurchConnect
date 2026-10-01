@@ -30,6 +30,15 @@ export class SupabasePredicationAudioStorage
     input: UploadPredicationAudioInput,
   ): Promise<UploadedPredicationAudio> {
     const path = buildAudioPath(input.fileName)
+    if (input.onProgress) {
+      await this.uploadWithProgress(path, input)
+      const { data: { publicUrl } } = supabase.storage
+        .from(PREDICATION_AUDIO_BUCKET)
+        .getPublicUrl(path)
+
+      return { path, publicUrl }
+    }
+
     const { data, error } = await supabase.storage
       .from(PREDICATION_AUDIO_BUCKET)
       .upload(path, input.audio, {
@@ -50,6 +59,55 @@ export class SupabasePredicationAudioStorage
       path: data.path,
       publicUrl,
     }
+  }
+
+  private async uploadWithProgress(
+    path: string,
+    input: UploadPredicationAudioInput,
+  ): Promise<void> {
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (error) throw error
+    if (!session) throw new Error('Reconnecte-toi pour envoyer un fichier audio.')
+
+    const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!.replace(/\/$/, '')
+    const objectPath = [PREDICATION_AUDIO_BUCKET, ...path.split('/')]
+      .map(encodeURIComponent)
+      .join('/')
+
+    await new Promise<void>((resolve, reject) => {
+      const request = new XMLHttpRequest()
+      request.open('POST', `${baseUrl}/storage/v1/object/${objectPath}`)
+      request.setRequestHeader('apikey', process.env.EXPO_PUBLIC_SUPABASE_KEY!)
+      request.setRequestHeader('Authorization', `Bearer ${session.access_token}`)
+      request.setRequestHeader('Content-Type', input.contentType)
+      request.setRequestHeader('Cache-Control', 'max-age=31536000')
+      request.setRequestHeader('x-upsert', 'false')
+      request.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          input.onProgress?.(Math.min(0.99, event.loaded / event.total))
+        }
+      }
+      request.onload = () => {
+        if (request.status >= 200 && request.status < 300) {
+          input.onProgress?.(1)
+          resolve()
+          return
+        }
+
+        let message = "Impossible d'envoyer le fichier audio."
+        try {
+          const response = JSON.parse(request.responseText)
+          if (typeof response.message === 'string') message = response.message
+        } catch {
+          // Keep the fallback message when the server response is not JSON.
+        }
+        reject(new Error(message))
+      }
+      request.onerror = () => reject(new Error("L'envoi a échoué. Vérifie ta connexion."))
+      request.onabort = () => reject(new Error("L'envoi du fichier audio a été annulé."))
+      input.onProgress?.(0)
+      request.send(input.audio)
+    })
   }
 
   async deleteAudio(path: string): Promise<void> {

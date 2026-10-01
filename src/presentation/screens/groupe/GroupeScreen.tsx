@@ -1,39 +1,12 @@
-import { groupeService } from '@/composition/groupe'
 import type { GroupeModel } from '@/domain/entités/Groupe'
+import { useGroupes } from '@/presentation/hooks/groupe/useGroupes'
 import { colors } from '@/shared/theme/colors'
-import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { toErrorMessage } from '@/shared/utils/errors'
+import { router } from 'expo-router'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 export default function GroupeScreen() {
-  const [groups, setGroups] = useState<GroupeModel[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useFocusEffect(
-    useCallback(() => {
-      let isMounted = true
-      setIsLoading(true)
-
-      groupeService
-        .listGroupes()
-        .then((items) => {
-          if (!isMounted) return
-          setGroups(items)
-        })
-        .catch((error) => {
-          if (!isMounted) return
-          console.warn(error)
-          setGroups([])
-        })
-        .finally(() => {
-          if (isMounted) setIsLoading(false)
-        })
-
-      return () => {
-        isMounted = false
-      }
-    }, []),
-  )
+  const { data: groups = [], isPending, isError, error, refetch } = useGroupes()
 
   function openCreateGroupe() {
     router.push('/create-groupe' as never)
@@ -103,7 +76,20 @@ export default function GroupeScreen() {
           ))}
         </View>
 
-        {!isLoading && groups.length === 0 ? (
+        {isPending ? <ActivityIndicator color={colors.primary} /> : null}
+
+        {isError ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>
+              {toErrorMessage(error, 'Impossible de charger les groupes.')}
+            </Text>
+            <Pressable onPress={() => void refetch()}>
+              <Text style={styles.groupMeta}>Réessayer</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {!isPending && !isError && groups.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>Aucun groupe</Text>
             <Text style={styles.emptyText}>

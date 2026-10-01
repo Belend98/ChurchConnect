@@ -6,7 +6,7 @@ import type {
 import type { NotificationRepository } from '@/domain/repositories/NotificationRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 
-type NotificationRow = {
+export type NotificationRow = {
   notification_id: string
   user_id: string
   type: string
@@ -20,7 +20,7 @@ type NotificationRow = {
 const NOTIFICATION_SELECT =
   'notification_id, user_id, type, titre, contenu, reference_id, is_read, created_at'
 
-function mapNotification(row: NotificationRow): NotificationModel {
+export function mapNotification(row: NotificationRow): NotificationModel {
   return {
     id: row.notification_id,
     userId: row.user_id,
@@ -60,24 +60,29 @@ export class SupabaseNotificationRepository
     return ((data ?? []) as NotificationRow[]).map(mapNotification)
   }
 
-  async markAllAsRead(userId: string): Promise<void> {
-    const { error } = await supabase
+  async markAllAsRead(userId: string): Promise<NotificationModel[]> {
+    const { data, error } = await supabase
       .from('notification')
       .update({ is_read: true })
       .eq('user_id', userId)
       .eq('is_read', false)
+      .select(NOTIFICATION_SELECT)
 
     if (error) throw error
+    return ((data ?? []) as NotificationRow[]).map(mapNotification)
   }
 
-  async markAsRead(id: string, userId: string): Promise<void> {
-    const { error } = await supabase
+  async markAsRead(id: string, userId: string): Promise<NotificationModel | null> {
+    const { data, error } = await supabase
       .from('notification')
       .update({ is_read: true })
       .eq('notification_id', id)
       .eq('user_id', userId)
+      .select(NOTIFICATION_SELECT)
+      .maybeSingle()
 
     if (error) throw error
+    return data ? mapNotification(data as NotificationRow) : null
   }
 
   subscribeToUserNotifications(

@@ -6,8 +6,8 @@ import type {
 export interface NotificationRepository {
   countUnread(userId: string): Promise<number>
   listByUser(userId: string): Promise<NotificationModel[]>
-  markAllAsRead(userId: string): Promise<void>
-  markAsRead(id: string, userId: string): Promise<void>
+  markAllAsRead(userId: string): Promise<NotificationModel[]>
+  markAsRead(id: string, userId: string): Promise<NotificationModel | null>
   subscribeToUserNotifications(
     userId: string,
     onNotification: (notification: NotificationModel) => void,

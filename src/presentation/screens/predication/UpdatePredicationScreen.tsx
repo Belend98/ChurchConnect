@@ -1,4 +1,5 @@
 import { predicationService } from '@/composition/predication'
+import type { PredicationModel } from '@/domain/entités/Predication'
 import {
   createPredicationSchema,
   type CreatePredicationInput,
@@ -6,9 +7,11 @@ import {
 import { PredicationCategoryPicker } from '@/presentation/component/PredicationCategoryPicker'
 import { useAudioFilePicker } from '@/presentation/hooks/predication/useAudioFilePicker'
 import { useRequirePredicationManager } from '@/presentation/hooks/predication/useRequirePredicationManager'
+import { PREDICATIONS_QUERY_KEY } from '@/presentation/queries/predicationQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
@@ -42,6 +45,7 @@ export default function UpdatePredicationScreen() {
   const params = useLocalSearchParams()
   const predicationId = getParam(params.id)
   const [errorText, setErrorText] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const {
     audioPickerError,
     clearAudioPickerError,
@@ -65,6 +69,49 @@ export default function UpdatePredicationScreen() {
     },
   })
 
+  const updatePredicationMutation = useMutation({
+    mutationFn: async (data: CreatePredicationInput) => {
+      if (!predicationId) {
+        throw new Error("Identifiant de prédication manquant.")
+      }
+
+      const durationSeconds = data.durationMinutes
+        ? Math.round(Number(data.durationMinutes) * 60)
+        : undefined
+
+      if (selectedAudio) {
+        const response = await fetch(selectedAudio.uri)
+        const audio = await response.arrayBuffer()
+
+        return predicationService.updatePredicationWithAudio(predicationId, {
+          audio,
+          categorieId: data.categorieId?.trim() || undefined,
+          contentType: selectedAudio.contentType,
+          durationSeconds,
+          fileName: selectedAudio.fileName,
+          title: data.title.trim(),
+        })
+      }
+
+      return predicationService.updatePredication(predicationId, {
+        categorieId: data.categorieId?.trim() || undefined,
+        durationSeconds,
+        mediaUrl: data.mediaUrl?.trim() ?? '',
+        title: data.title.trim(),
+      })
+    },
+    onSuccess: (updatedPredication) => {
+      queryClient.setQueryData<PredicationModel[]>(
+        PREDICATIONS_QUERY_KEY,
+        (current = []) =>
+          current.map((item) =>
+            item.id === updatedPredication.id ? updatedPredication : item,
+          ),
+      )
+    },
+  })
+  const isUpdatingPredication = isSubmitting || updatePredicationMutation.isPending
+
   async function handlePickAudioFile() {
     if (!canAccessScreen) return
 
@@ -76,46 +123,23 @@ export default function UpdatePredicationScreen() {
     setErrorText(null)
     clearAudioPickerError()
 
+    if (!canAccessScreen) {
+      setErrorText(ACCESS_DENIED_MESSAGE)
+      return
+    }
+
+    if (!predicationId) {
+      setErrorText("Identifiant de prédication manquant.")
+      return
+    }
+
+    if (!selectedAudio && !data.mediaUrl?.trim()) {
+      setErrorText('Choisis un fichier audio ou entre une URL audio.')
+      return
+    }
+
     try {
-      if (!canAccessScreen) {
-        setErrorText(ACCESS_DENIED_MESSAGE)
-        return
-      }
-
-      if (!predicationId) {
-        setErrorText("Identifiant de prédication manquant.")
-        return
-      }
-
-      if (!selectedAudio && !data.mediaUrl?.trim()) {
-        setErrorText('Choisis un fichier audio ou entre une URL audio.')
-        return
-      }
-
-      const durationSeconds = data.durationMinutes
-        ? Math.round(Number(data.durationMinutes) * 60)
-        : undefined
-
-      if (selectedAudio) {
-        const response = await fetch(selectedAudio.uri)
-        const audio = await response.arrayBuffer()
-
-        await predicationService.updatePredicationWithAudio(predicationId, {
-          audio,
-          categorieId: data.categorieId?.trim() || undefined,
-          contentType: selectedAudio.contentType,
-          durationSeconds,
-          fileName: selectedAudio.fileName,
-          title: data.title.trim(),
-        })
-      } else {
-        await predicationService.updatePredication(predicationId, {
-          categorieId: data.categorieId?.trim() || undefined,
-          durationSeconds,
-          mediaUrl: data.mediaUrl?.trim() ?? '',
-          title: data.title.trim(),
-        })
-      }
+      await updatePredicationMutation.mutateAsync(data)
 
       Alert.alert('Prédication modifiée', 'Les changements sont enregistrés.')
       router.back()
@@ -274,12 +298,12 @@ export default function UpdatePredicationScreen() {
         ) : null}
 
         <Pressable
-          disabled={isSubmitting}
+          disabled={isUpdatingPredication}
           onPress={handleSubmit(onSubmit)}
-          style={[styles.button, isSubmitting && styles.buttonDisabled]}
+          style={[styles.button, isUpdatingPredication && styles.buttonDisabled]}
         >
           <Text style={styles.buttonText}>
-            {isSubmitting ? 'Modification...' : 'Modifier la prédication'}
+            {isUpdatingPredication ? 'Modification...' : 'Modifier la prédication'}
           </Text>
         </Pressable>
       </View>

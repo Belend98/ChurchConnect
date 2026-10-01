@@ -86,7 +86,7 @@ export default function TabLayout() {
               }}
             />
           ),
-          title: 'Messages',
+          title: 'Prédications',
         }}
       />
       <Tabs.Screen

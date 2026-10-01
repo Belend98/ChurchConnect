@@ -311,13 +311,23 @@ create policy "groupe_membre_select_group_members_only"
 on public.groupe_membre
 for select
 to authenticated
-using (public.is_group_member(groupe_id));
+using (
+  user_id = auth.uid()
+  or public.is_group_member(groupe_id)
+);
 
 create policy "groupe_membre_insert_manager"
 on public.groupe_membre
 for insert
 to authenticated
-with check (public.can_manage_group(groupe_id));
+with check (
+  public.can_manage_group(groupe_id)
+  or (
+    user_id = auth.uid()
+    and is_group_admin = true
+    and public.is_group_creator(groupe_id)
+  )
+);
 
 create policy "groupe_membre_update_manager"
 on public.groupe_membre

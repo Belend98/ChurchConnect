@@ -43,9 +43,7 @@ export default function PredicationPlayerScreen() {
     durationSeconds?: string
   }>()
   const [speedIndex, setSpeedIndex] = useState(0)
-  const [isFavorite, setIsFavorite] = useState(false)
-  const [isLiked, setIsLiked] = useState(false)
-  const [hasRestoredProgress, setHasRestoredProgress] = useState(false)
+   const [hasRestoredProgress, setHasRestoredProgress] = useState(false)
   const [progressTrackWidth, setProgressTrackWidth] = useState(0)
 
   const audioSource = useMemo(() => params.mediaUrl ?? null, [params.mediaUrl])
@@ -241,31 +239,7 @@ export default function PredicationPlayerScreen() {
           <Pressable onPress={() => seekBy(15)} style={styles.roundControl}>
             <Text style={styles.roundControlText}>+15</Text>
           </Pressable>
-          <Pressable style={styles.smallControl}>
-            <Text style={styles.smallControlText}>
-              {hasRestoredProgress ? 'Reprise' : '...'}
-            </Text>
-          </Pressable>
         </View>
-      </View>
-
-      <View style={styles.actions}>
-        <Pressable
-          onPress={() => setIsLiked((current) => !current)}
-          style={[styles.actionButton, isLiked && styles.actionButtonActive]}
-        >
-          <Text style={[styles.actionText, isLiked && styles.actionActive]}>
-            {isLiked ? 'Aimé' : 'Aimer'}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setIsFavorite((current) => !current)}
-          style={[styles.actionButton, isFavorite && styles.actionButtonActive]}
-        >
-          <Text style={[styles.actionText, isFavorite && styles.actionActive]}>
-            {isFavorite ? 'Favori' : 'Ajouter aux favoris'}
-          </Text>
-        </Pressable>
       </View>
     </ScrollView>
   )

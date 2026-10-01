@@ -43,6 +43,7 @@ export class PredicationService {
       fileName: data.fileName,
       contentType: data.contentType,
       audio: data.audio,
+      onProgress: data.onProgress,
     })
 
     try {

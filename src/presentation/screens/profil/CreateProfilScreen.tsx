@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import {
   Alert,
@@ -21,6 +21,9 @@ import {
 } from '@/domain/rules/userSchema'
 import { profilService } from '@/composition/profil'
 import { useImageFilePicker } from '@/presentation/hooks/useImageFilePicker'
+import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
+import { cacheCurrentProfile } from '@/presentation/queries/profilQueries'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 type SupabaseLikeError = {
   code?: string
@@ -52,7 +55,7 @@ const ProfileSetupScreen = () => {
   const {
     control,
     handleSubmit,
-    setValue,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<CreateUserFormInput, unknown, CreateUserInput>({
     resolver: zodResolver(createUserSchema),
@@ -66,7 +69,10 @@ const ProfileSetupScreen = () => {
   })
 
   const [errorText, setErrorText] = useState<string | null>(null)
-  const [existingImageUrl, setExistingImageUrl] = useState<string | undefined>()
+  const { data: profile, userId, isSuccess, isPending: isLoadingProfile, error: profileError } = useCurrentProfile()
+  const existingImageUrl = profile?.imageUrl
+  const queryClient = useQueryClient()
+  const hydratedUserId = useRef<string | null>(null)
   const {
     clearImagePickerError,
     imagePickerError,
@@ -75,33 +81,39 @@ const ProfileSetupScreen = () => {
   } = useImageFilePicker()
 
   useEffect(() => {
-    let isMounted = true
+    if (!userId || !isSuccess || hydratedUserId.current === userId) return
+    // Hydrate once per account so Realtime does not overwrite edits in progress.
+    reset({
+      username: profile?.username ?? '',
+      nom: profile?.nom ?? '',
+      prenom: profile?.prenom ?? '',
+      bio: profile?.bio ?? '',
+      dateNaissance: profile?.dateNaissance?.toISOString().slice(0, 10) ?? '',
+    })
+    hydratedUserId.current = userId
+  }, [isSuccess, profile, reset, userId])
 
-    authService
-      .getCurrentUser()
-      .then(async (user) => {
-        if (!user) return null
-        return profilService.getMyProfile(user.id)
-      })
-      .then((profile) => {
-        if (!isMounted || !profile) return
-
-        setValue('username', profile.username ?? '')
-        setValue('nom', profile.nom ?? '')
-        setValue('prenom', profile.prenom ?? '')
-        setValue('bio', profile.bio ?? '')
-        setValue(
-          'dateNaissance',
-          profile.dateNaissance?.toISOString().slice(0, 10) ?? '',
-        )
-        setExistingImageUrl(profile.imageUrl)
-      })
-      .catch((error) => console.warn(error))
-
-    return () => {
-      isMounted = false
-    }
-  }, [setValue])
+  const saveProfileMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: CreateUserInput }) => {
+      if (selectedImage) {
+        const response = await fetch(selectedImage.uri)
+        const image = await response.arrayBuffer()
+        return profilService.createProfileWithImage(id, {
+          ...data,
+          imageFile: {
+            contentType: selectedImage.contentType,
+            fileName: selectedImage.fileName,
+            image,
+          },
+        })
+      }
+      return profilService.createProfile(id, { ...data, imageUrl: existingImageUrl })
+    },
+    onSuccess: (savedProfile, { id }) => {
+      if (id === userId) return cacheCurrentProfile(queryClient, id, savedProfile)
+    },
+  })
+  const isSaving = isSubmitting || saveProfileMutation.isPending
 
   const handleSignOut = async () => {
     try {
@@ -116,33 +128,14 @@ const ProfileSetupScreen = () => {
     setErrorText(null)
     clearImagePickerError()
 
-    const user = await authService.getCurrentUser()
-
-    if (!user) {
+    if (!userId) {
       setErrorText('Session invalide. Reconnecte-toi.')
       router.replace('/(auth)/signup')
       return
     }
 
     try {
-      if (selectedImage) {
-        const response = await fetch(selectedImage.uri)
-        const image = await response.arrayBuffer()
-
-        await profilService.createProfileWithImage(user.id, {
-          ...data,
-          imageFile: {
-            contentType: selectedImage.contentType,
-            fileName: selectedImage.fileName,
-            image,
-          },
-        })
-      } else {
-        await profilService.createProfile(user.id, {
-          ...data,
-          imageUrl: existingImageUrl,
-        })
-      }
+      await saveProfileMutation.mutateAsync({ id: userId, data })
 
       Alert.alert('Profil enregistré', 'Ton profil est pret.')
       router.replace('../(tabs)/home')
@@ -279,14 +272,15 @@ const ProfileSetupScreen = () => {
       {errorText || imagePickerError ? (
         <Text style={styles.errorText}>{errorText ?? imagePickerError}</Text>
       ) : null}
+      {profileError ? <Text style={styles.errorText}>{toReadableProfileError(profileError)}</Text> : null}
 
       <Pressable
         onPress={handleSubmit(onSubmit)}
-        style={[styles.button, isSubmitting ? styles.buttonDisabled : undefined]}
-        disabled={isSubmitting}
+        style={[styles.button, (isSaving || isLoadingProfile) ? styles.buttonDisabled : undefined]}
+        disabled={isSaving || isLoadingProfile || !userId || Boolean(profileError)}
       >
         <Text style={styles.buttonText}>
-          {isSubmitting ? 'Enregistrement...' : 'Enregistrer mon profil'}
+          {isSaving ? 'Enregistrement...' : 'Enregistrer mon profil'}
         </Text>
       </Pressable>
 

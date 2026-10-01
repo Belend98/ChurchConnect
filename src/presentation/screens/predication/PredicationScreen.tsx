@@ -14,29 +14,30 @@ import {
 import { PredicationComponent } from '@/presentation/component/PredicationComponent'
 import { categorieService } from '@/composition/categorie'
 import { predicationService } from '@/composition/predication'
-import { profilService } from '@/composition/profil'
 import type { CategorieModel } from '@/domain/entités/Categorie'
 import type { PredicationModel } from '@/domain/entités/Predication'
 import { canManagePredications } from '@/domain/entités/Profil'
-import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
+import { CATEGORIES_QUERY_KEY } from '@/presentation/queries/categorieQueries'
+import { PREDICATIONS_QUERY_KEY } from '@/presentation/queries/predicationQueries'
+import { router } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 const ALL_CATEGORIES_FILTER = 'all'
+const EMPTY_PREDICATIONS: PredicationModel[] = []
 
 export default function PredicationScreen() {
-  const [categories, setCategories] = useState<CategorieModel[]>([])
   const [categoryActionId, setCategoryActionId] = useState<string | null>(null)
   const [categoryError, setCategoryError] = useState<string | null>(null)
-  const [predications, setPredications] = useState<PredicationModel[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [editingCategoryName, setEditingCategoryName] = useState('')
   const [favoriteById, setFavoriteById] = useState<Record<string, boolean>>({})
   const [favoritingId, setFavoritingId] = useState<string | null>(null)
-  const [canManagePredicationItems, setCanManagePredicationItems] =
-    useState(false)
+  const { data: profile, isError: isProfileError } = useCurrentProfile()
+  const canManagePredicationItems = !isProfileError && canManagePredications(profile?.roleApp)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [likedById, setLikedById] = useState<Record<string, boolean>>({})
   const [likesById, setLikesById] = useState<Record<string, number>>({})
   const [likingId, setLikingId] = useState<string | null>(null)
@@ -45,91 +46,126 @@ export default function PredicationScreen() {
   const [selectedCategoryId, setSelectedCategoryId] = useState(
     ALL_CATEGORIES_FILTER,
   )
+  const queryClient = useQueryClient()
+  const {
+    data: predications = EMPTY_PREDICATIONS,
+    error: predicationsError,
+    isError: isPredicationsError,
+    isLoading,
+  } = useQuery({
+    queryKey: PREDICATIONS_QUERY_KEY,
+    queryFn: () => predicationService.listPredications(),
+    staleTime: Infinity,
+  })
+  const { data: categories = [] } = useQuery({
+    queryKey: CATEGORIES_QUERY_KEY,
+    queryFn: () => categorieService.listCategories(),
+    staleTime: Infinity,
+  })
 
-  const loadCategories = useCallback(async () => {
-    const items = await categorieService.listCategories()
-    setCategories(items)
-    return items
-  }, [])
+  const createCategoryMutation = useMutation({
+    mutationFn: (nom: string) => categorieService.createCategorie({ nom }),
+    onSuccess: (categorie) => {
+      queryClient.setQueryData<CategorieModel[]>(
+        CATEGORIES_QUERY_KEY,
+        (current = []) =>
+          [...current.filter((item) => item.id !== categorie.id), categorie]
+            .sort((a, b) => a.nom.localeCompare(b.nom)),
+      )
+    },
+  })
 
-  useFocusEffect(
-    useCallback(() => {
-      let isMounted = true
-      setIsLoading(true)
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ id, nom }: { id: string; nom: string }) =>
+      categorieService.updateCategorie(id, { nom }),
+    onSuccess: (categorie) => {
+      queryClient.setQueryData<CategorieModel[]>(
+        CATEGORIES_QUERY_KEY,
+        (current = []) =>
+          current
+            .map((item) => (item.id === categorie.id ? categorie : item))
+            .sort((a, b) => a.nom.localeCompare(b.nom)),
+      )
+    },
+  })
 
-      async function loadScreen() {
-        const [items, categoryItems, profile] = await Promise.all([
-          predicationService.listPredications(),
-          categorieService.listCategories(),
-          profilService.getCurrentUserProfileOrThrow().catch(() => null),
-        ])
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id: string) => categorieService.deleteCategorie(id),
+    onSuccess: (_result, categorieId) => {
+      queryClient.setQueryData<CategorieModel[]>(
+        CATEGORIES_QUERY_KEY,
+        (current = []) => current.filter((item) => item.id !== categorieId),
+      )
 
-        if (!isMounted) return
+      if (selectedCategoryId === categorieId) {
+        setSelectedCategoryId(ALL_CATEGORIES_FILTER)
+      }
+    },
+  })
 
-        setPredications(items)
-        setCategories(categoryItems)
-        setCanManagePredicationItems(canManagePredications(profile?.roleApp))
+  useEffect(() => {
+    let isMounted = true
 
-        const engagementEntries = await Promise.all(
-          items.map(async (item) => {
-            const [likes, isFavorite, isLiked] = await Promise.all([
-              predicationService.countLikes(item.id),
-              predicationService.isFavoriteByCurrentUser(item.id),
-              predicationService.isLikedByCurrentUser(item.id),
-            ])
-
-            return [item.id, { isFavorite, isLiked, likes }] as const
-          }),
-        )
-
-        if (!isMounted) return
-
-        setLikedById(
-          Object.fromEntries(
-            engagementEntries.map(([id, engagement]) => [
-              id,
-              engagement.isLiked,
-            ]),
-          ),
-        )
-        setFavoriteById(
-          Object.fromEntries(
-            engagementEntries.map(([id, engagement]) => [
-              id,
-              engagement.isFavorite,
-            ]),
-          ),
-        )
-        setLikesById(
-          Object.fromEntries(
-            engagementEntries.map(([id, engagement]) => [
-              id,
-              engagement.likes,
-            ]),
-          ),
-        )
+    async function loadEngagement() {
+      if (predications.length === 0) {
+        setFavoriteById({})
+        setLikedById({})
+        setLikesById({})
+        return
       }
 
-      loadScreen()
-        .catch((error) => {
-          if (!isMounted) return
-          console.warn(error)
-          setCategories([])
-          setPredications([])
-          setFavoriteById({})
-          setLikedById({})
-          setLikesById({})
-          setCanManagePredicationItems(false)
-        })
-        .finally(() => {
-          if (isMounted) setIsLoading(false)
-        })
+      const engagementEntries = await Promise.all(
+        predications.map(async (item) => {
+          const [likes, isFavorite, isLiked] = await Promise.all([
+            predicationService.countLikes(item.id),
+            predicationService.isFavoriteByCurrentUser(item.id),
+            predicationService.isLikedByCurrentUser(item.id),
+          ])
 
-      return () => {
-        isMounted = false
-      }
-    }, []),
-  )
+          return [item.id, { isFavorite, isLiked, likes }] as const
+        }),
+      )
+
+      if (!isMounted) return
+
+      setLikedById(
+        Object.fromEntries(
+          engagementEntries.map(([id, engagement]) => [
+            id,
+            engagement.isLiked,
+          ]),
+        ),
+      )
+      setFavoriteById(
+        Object.fromEntries(
+          engagementEntries.map(([id, engagement]) => [
+            id,
+            engagement.isFavorite,
+          ]),
+        ),
+      )
+      setLikesById(
+        Object.fromEntries(
+          engagementEntries.map(([id, engagement]) => [
+            id,
+            engagement.likes,
+          ]),
+        ),
+      )
+    }
+
+    loadEngagement().catch((error) => {
+      if (!isMounted) return
+      console.warn(error)
+      setFavoriteById({})
+      setLikedById({})
+      setLikesById({})
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [predications])
 
   function openPlayer(predication: PredicationModel) {
     router.push(
@@ -167,8 +203,7 @@ export default function PredicationScreen() {
     setCategoryActionId('new')
 
     try {
-      await categorieService.createCategorie({ nom: trimmedName })
-      await loadCategories()
+      await createCategoryMutation.mutateAsync(trimmedName)
       setNewCategoryName('')
     } catch (error) {
       setCategoryError(
@@ -198,8 +233,10 @@ export default function PredicationScreen() {
     setCategoryActionId(categorieId)
 
     try {
-      await categorieService.updateCategorie(categorieId, { nom: trimmedName })
-      await loadCategories()
+      await updateCategoryMutation.mutateAsync({
+        id: categorieId,
+        nom: trimmedName,
+      })
       setEditingCategoryId(null)
       setEditingCategoryName('')
     } catch (error) {
@@ -240,12 +277,7 @@ export default function PredicationScreen() {
     setCategoryError(null)
 
     try {
-      await categorieService.deleteCategorie(categorieId)
-      await loadCategories()
-
-      if (selectedCategoryId === categorieId) {
-        setSelectedCategoryId(ALL_CATEGORIES_FILTER)
-      }
+      await deleteCategoryMutation.mutateAsync(categorieId)
     } catch (error) {
       setCategoryError(
         toErrorMessage(
@@ -302,8 +334,10 @@ export default function PredicationScreen() {
 
     try {
       await predicationService.deletePredication(predication.id)
-      setPredications((current) =>
-        current.filter((item) => item.id !== predication.id),
+      queryClient.setQueryData<PredicationModel[]>(
+        PREDICATIONS_QUERY_KEY,
+        (current = []) =>
+          current.filter((item) => item.id !== predication.id),
       )
     } catch (error) {
       console.warn(error)
@@ -416,7 +450,6 @@ export default function PredicationScreen() {
     >
       <View style={styles.header}>
         <View>
-          <Text style={styles.eyebrow}>Médiathèque spirituelle</Text>
           <Text style={styles.title}>Prédications</Text>
         </View>
         {canManagePredicationItems ? (
@@ -483,11 +516,23 @@ export default function PredicationScreen() {
         <Text style={styles.sectionTitle}>Toutes les prédications</Text>
       </View>
 
+      {isPredicationsError ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>Chargement impossible</Text>
+          <Text style={styles.emptyText}>
+            {toErrorMessage(
+              predicationsError,
+              'Impossible de charger les prédications.',
+            )}
+          </Text>
+        </View>
+      ) : null}
+
       <View style={styles.sermonList}>
         {filteredPredications.map((predication) => (
           <PredicationComponent
             canManagePredication={canManagePredicationItems}
-            categoryName={getCategoryName(predication.categorieId)}
+            categoryName={categories.find((categorie) => categorie.id === predication.categorieId)?.nom}
             isDeleting={deletingId === predication.id}
             isFavorite={Boolean(favoriteById[predication.id])}
             isFavoriting={favoritingId === predication.id}
@@ -505,7 +550,7 @@ export default function PredicationScreen() {
         ))}
       </View>
 
-      {!isLoading && filteredPredications.length === 0 ? (
+      {!isLoading && !isPredicationsError && filteredPredications.length === 0 ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>Aucune prédication</Text>
           <Text style={styles.emptyText}>

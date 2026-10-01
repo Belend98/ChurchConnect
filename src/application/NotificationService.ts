@@ -23,16 +23,16 @@ export class NotificationService {
     return this.notificationRepository.listByUser(userId)
   }
 
-  async markAllMyNotificationsAsRead(): Promise<void> {
+  async markAllMyNotificationsAsRead(): Promise<NotificationModel[]> {
     const userId = await this.authService.getCurrentUserIdOrThrow()
 
-    await this.notificationRepository.markAllAsRead(userId)
+    return this.notificationRepository.markAllAsRead(userId)
   }
 
-  async markMyNotificationAsRead(id: string): Promise<void> {
+  async markMyNotificationAsRead(id: string): Promise<NotificationModel | null> {
     const userId = await this.authService.getCurrentUserIdOrThrow()
 
-    await this.notificationRepository.markAsRead(id, userId)
+    return this.notificationRepository.markAsRead(id, userId)
   }
 
   async subscribeToMyNotifications(

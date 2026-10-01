@@ -1,9 +1,9 @@
 import { authService } from '@/composition/Auth'
-import { groupeService } from '@/composition/groupe'
 import { predicationService } from '@/composition/predication'
-import { profilService } from '@/composition/profil'
 import type { PredicationModel } from '@/domain/entités/Predication'
 import { getAppRoleLabel, type ProfilModel } from '@/domain/entités/Profil'
+import { useGroupes } from '@/presentation/hooks/groupe/useGroupes'
+import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { router, useFocusEffect } from 'expo-router'
@@ -20,21 +20,15 @@ import {
 
 type EspaceStats = {
   favorites: number
-  groupes: number
   predications: number
-}
-
-type CurrentProfile = ProfilModel & {
-  email?: string | null
 }
 
 const initialStats: EspaceStats = {
   favorites: 0,
-  groupes: 0,
   predications: 0,
 }
 
-function getDisplayName(profile: CurrentProfile | null): string {
+function getDisplayName(profile: ProfilModel | null): string {
   if (!profile) return 'Mon espace'
 
   const fullName = [profile.prenom, profile.nom].filter(Boolean).join(' ')
@@ -43,12 +37,13 @@ function getDisplayName(profile: CurrentProfile | null): string {
 }
 
 export default function MonEspaceScreen() {
+  const { data: groupes = [], isPending: isLoadingGroupes } = useGroupes()
   const [errorText, setErrorText] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [favoritePredications, setFavoritePredications] = useState<
     PredicationModel[]
   >([])
-  const [profile, setProfile] = useState<CurrentProfile | null>(null)
+  const { data: profile = null, email, error: profileError } = useCurrentProfile()
   const [stats, setStats] = useState<EspaceStats>(initialStats)
 
   useFocusEffect(
@@ -58,24 +53,20 @@ export default function MonEspaceScreen() {
       setErrorText(null)
 
       Promise.all([
-        profilService.getCurrentUserProfileOrThrow(),
-        groupeService.listGroupes(),
         predicationService.listPredications(),
         predicationService.listMyFavorites().catch(() => []),
       ])
-        .then(([profileItem, groupes, predications, favorites]) => {
+        .then(([predications, favorites]) => {
           if (!isMounted) return
           const favoriteIds = new Set(
             favorites.map((favorite) => favorite.predicationId),
           )
 
-          setProfile(profileItem)
           setFavoritePredications(
             predications.filter((predication) => favoriteIds.has(predication.id)),
           )
           setStats({
             favorites: favorites.length,
-            groupes: groupes.length,
             predications: predications.length,
           })
         })
@@ -84,7 +75,6 @@ export default function MonEspaceScreen() {
           console.warn(error)
           setErrorText(toErrorMessage(error))
           setFavoritePredications([])
-          setProfile(null)
           setStats(initialStats)
         })
         .finally(() => {
@@ -132,8 +122,7 @@ export default function MonEspaceScreen() {
     >
       <View style={styles.header}>
         <View>
-          <Text style={styles.eyebrow}>Profil</Text>
-          <Text style={styles.title}>Bienvenue, {displayName}</Text>
+          <Text style={styles.eyebrow}>Mon espace</Text>
         </View>
       </View>
 
@@ -152,7 +141,7 @@ export default function MonEspaceScreen() {
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{displayName}</Text>
             <Text numberOfLines={1} style={styles.profileMeta}>
-              {profile?.email ?? 'Utilisateur connecté'}
+              {email ?? 'Utilisateur connecté'}
             </Text>
             <Text style={styles.profileRole}>
               {getAppRoleLabel(profile?.roleApp)}
@@ -169,10 +158,11 @@ export default function MonEspaceScreen() {
       </View>
 
       {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+      {profileError ? <Text style={styles.errorText}>{toErrorMessage(profileError)}</Text> : null}
 
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>{isLoading ? '...' : stats.groupes}</Text>
+          <Text style={styles.statValue}>{isLoadingGroupes ? '...' : groupes.length}</Text>
           <Text style={styles.statLabel}>Groupes</Text>
         </View>
         <View style={styles.statCard}>
@@ -190,11 +180,33 @@ export default function MonEspaceScreen() {
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Accès rapides</Text>
+        <Pressable
+          onPress={() => router.push('/(tabs)/predication' as never)}
+          style={styles.linkRow}
+        >
+          <View>
+            <Text style={styles.linkTitle}>Toutes les prédications</Text>
+            <Text style={styles.linkText}>Écouter et gérer les favoris</Text>
+          </View>
+          <Text style={styles.linkArrow}>›</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/(tabs)/groupe' as never)}
+          style={styles.linkRow}
+        >
+          <View>
+            <Text style={styles.linkTitle}>Mes groupes</Text>
+            <Text style={styles.linkText}>Rejoindre vos discussions</Text>
+          </View>
+          <Text style={styles.linkArrow}>›</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Favoris</Text>
-          <Text style={styles.sectionMeta}>
-            {isLoading ? '...' : favoritePredications.length}
-          </Text>
         </View>
 
         {favoritePredications.slice(0, 3).map((predication) => (
@@ -225,31 +237,6 @@ export default function MonEspaceScreen() {
             </Text>
           </View>
         ) : null}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Accès rapides</Text>
-        <Pressable
-          onPress={() => router.push('/(tabs)/predication' as never)}
-          style={styles.linkRow}
-        >
-          <View>
-            <Text style={styles.linkTitle}>Toutes les prédications</Text>
-            <Text style={styles.linkText}>Écouter et gérer les favoris</Text>
-          </View>
-          <Text style={styles.linkArrow}>›</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => router.push('/(tabs)/groupe' as never)}
-          style={styles.linkRow}
-        >
-          <View>
-            <Text style={styles.linkTitle}>Mes groupes</Text>
-            <Text style={styles.linkText}>Rejoindre vos discussions</Text>
-          </View>
-          <Text style={styles.linkArrow}>›</Text>
-        </Pressable>
       </View>
 
       <Pressable onPress={signOut} style={styles.signOutButton}>
@@ -397,16 +384,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 18,
     fontWeight: '800',
-  },
-  sectionMeta: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 8,
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
   },
   favoriteRow: {
     alignItems: 'center',

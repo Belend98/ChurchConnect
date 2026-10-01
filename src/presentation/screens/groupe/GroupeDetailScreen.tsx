@@ -1,4 +1,3 @@
-import { authService } from '@/composition/Auth'
 import { groupeService } from '@/composition/groupe'
 import { messageGroupeService } from '@/composition/messageGroupe'
 import { profilService } from '@/composition/profil'
@@ -10,12 +9,15 @@ import {
   getGroupRoleLabel,
   isGroupCreator,
   type GroupeModel,
+  type UpdateGroupeModel,
 } from '@/domain/entités/Groupe'
-import type { GroupeMembreModel } from '@/domain/entités/GroupeMember'
 import type { MessageGroupeModel } from '@/domain/entités/MessageGroupe'
 import type { ProfilModel } from '@/domain/entités/Profil'
+import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
+import { cacheGroupe, groupeKeys, removeCachedGroupe } from '@/presentation/queries/groupeQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import {
@@ -66,70 +68,108 @@ export default function GroupeDetailScreen() {
   const groupId = getParam(params.id)
   const groupName = getParam(params.name) || 'Groupe'
   const [addMemberError, setAddMemberError] = useState<string | null>(null)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const currentUserId = useCurrentUserId()
+  const queryClient = useQueryClient()
   const [editDescription, setEditDescription] = useState('')
   const [editName, setEditName] = useState('')
-  const [groupe, setGroupe] = useState<GroupeModel | null>(null)
-  const [currentMembership, setCurrentMembership] =
-    useState<GroupeMembreModel | null>(null)
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
-  const [isAddingMember, setIsAddingMember] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [isLeaving, setIsLeaving] = useState(false)
   const [isLoadingMessages, setIsLoadingMessages] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isSendingMessage, setIsSendingMessage] = useState(false)
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [memberProfiles, setMemberProfiles] = useState<
-    Record<string, ProfilModel>
-  >({})
-  const [members, setMembers] = useState<GroupeMembreModel[]>([])
   const [messageText, setMessageText] = useState('')
   const [messages, setMessages] = useState<MessageGroupeModel[]>([])
   const [messagesError, setMessagesError] = useState<string | null>(null)
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [username, setUsername] = useState('')
 
-  const loadGroupContext = useCallback(async () => {
-    if (!groupId) return
+  const groupQuery = useQuery({
+    queryKey: groupeKeys.detail(currentUserId, groupId),
+    queryFn: () => groupeService.getGroupe(groupId),
+    enabled: Boolean(currentUserId && groupId),
+    staleTime: Infinity,
+    initialData: () => {
+      if (queryClient.getQueryState(groupeKeys.list(currentUserId))?.isInvalidated) return
+      return queryClient.getQueryData<GroupeModel[]>(groupeKeys.list(currentUserId))
+        ?.find((item) => item.id === groupId)
+    },
+  })
+  const groupe = groupQuery.data ?? null
+  const accessibleGroupId = currentUserId && groupe ? groupId : null
+  const membersQuery = useQuery({
+    queryKey: groupeKeys.members(currentUserId, groupId),
+    queryFn: async () => {
+      const members = await groupeService.listMembres(groupId)
+      const profiles = await profilService.listProfilesByIds(
+        members.map((member) => member.userId),
+      )
+      return {
+        members,
+        profiles: Object.fromEntries(profiles.map((profile) => [profile.id, profile])),
+      }
+    },
+    enabled: Boolean(currentUserId && groupe),
+    staleTime: Infinity,
+  })
+  const members = groupe ? membersQuery.data?.members ?? [] : []
+  const memberProfiles = groupe ? membersQuery.data?.profiles ?? {} : {}
+  const currentMembership = members.find((member) => member.userId === currentUserId)
 
-    const [groupeItem, user, memberItems] = await Promise.all([
-      groupeService.getGroupe(groupId),
-      authService.getCurrentUser(),
-      groupeService.listMembres(groupId),
+  const addMemberMutation = useMutation({
+    mutationFn: (username: string) => groupeService.addMembreByUsername(groupId, username),
+    onSuccess: () => queryClient.invalidateQueries({
+      queryKey: groupeKeys.members(currentUserId, groupId),
+    }),
+  })
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdateGroupeModel) => groupeService.updateGroupe(groupId, data),
+    onMutate: () => ({ userId: currentUserId, groupId }),
+    onSuccess: async (groupe, _data, context) => {
+      if (context?.userId !== currentUserId || context?.groupId !== groupId) return
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: groupeKeys.list(currentUserId) }),
+        queryClient.cancelQueries({ queryKey: groupeKeys.detail(currentUserId, groupId) }),
+      ])
+      if (currentUserId) cacheGroupe(queryClient, currentUserId, groupe)
+    },
+  })
+  async function removeFromCache() {
+    await Promise.all([
+      queryClient.cancelQueries({ queryKey: groupeKeys.list(currentUserId) }),
+      queryClient.cancelQueries({ queryKey: groupeKeys.detail(currentUserId, groupId) }),
     ])
-
-    const profiles = await profilService.listProfilesByIds(
-      memberItems.map((member) => member.userId),
-    )
-    const profileById = profiles.reduce<Record<string, ProfilModel>>(
-      (acc, profile) => {
-        acc[profile.id] = profile
-        return acc
-      },
-      {},
-    )
-    const currentMembership = memberItems.find(
-      (member) => member.userId === user?.id,
-    )
-
-    setCurrentUserId(user?.id ?? null)
-    setGroupe(groupeItem)
-    setEditName(groupeItem?.name ?? groupName)
-    setEditDescription(groupeItem?.description ?? '')
-    setMembers(memberItems)
-    setMemberProfiles(profileById)
-    setCurrentMembership(currentMembership ?? null)
-  }, [groupId, groupName])
+    if (currentUserId) removeCachedGroupe(queryClient, currentUserId, groupId)
+  }
+  const deleteMutation = useMutation({
+    mutationFn: () => groupeService.deleteGroupe(groupId),
+    onMutate: () => ({ userId: currentUserId, groupId }),
+    onSuccess: (_data, _variables, context) => {
+      if (context?.userId === currentUserId && context?.groupId === groupId) {
+        return removeFromCache()
+      }
+    },
+  })
+  const leaveMutation = useMutation({
+    mutationFn: (userId: string) => groupeService.removeMembreFromGroupe(groupId, userId),
+    onMutate: () => ({ userId: currentUserId, groupId }),
+    onSuccess: (_data, _variables, context) => {
+      if (context?.userId === currentUserId && context?.groupId === groupId) {
+        return removeFromCache()
+      }
+    },
+  })
+  const isAddingMember = addMemberMutation.isPending
+  const isUpdating = updateMutation.isPending
+  const isDeleting = deleteMutation.isPending
+  const isLeaving = leaveMutation.isPending
 
   const loadMessages = useCallback(async () => {
-    if (!groupId) return
+    if (!accessibleGroupId) return
 
     setMessagesError(null)
     setIsLoadingMessages(true)
 
     try {
-      const messageItems = await messageGroupeService.listMessages(groupId)
+      const messageItems = await messageGroupeService.listMessages(accessibleGroupId)
       setMessages(messageItems)
     } catch (error) {
       console.warn(error)
@@ -138,34 +178,20 @@ export default function GroupeDetailScreen() {
     } finally {
       setIsLoadingMessages(false)
     }
-  }, [groupId])
+  }, [accessibleGroupId, setMessagesError, setIsLoadingMessages, setMessages])
 
   useFocusEffect(
     useCallback(() => {
-      let isMounted = true
-
-      loadGroupContext().catch((error) => {
-        if (!isMounted) return
-        console.warn(error)
-        setGroupe(null)
-        setCurrentMembership(null)
-        setMembers([])
-        setMemberProfiles({})
-      })
-      loadMessages()
-
-      return () => {
-        isMounted = false
-      }
-    }, [loadGroupContext, loadMessages]),
+      void loadMessages()
+    }, [loadMessages]),
   )
 
   useFocusEffect(
     useCallback(() => {
-      if (!groupId) return undefined
+      if (!accessibleGroupId) return undefined
 
       const unsubscribe = messageGroupeService.subscribeToNewMessages(
-        groupId,
+        accessibleGroupId,
         (message) => {
           setMessages((currentMessages) =>
             appendMessageUnique(currentMessages, message),
@@ -176,7 +202,7 @@ export default function GroupeDetailScreen() {
       return () => {
         unsubscribe()
       }
-    }, [groupId]),
+    }, [accessibleGroupId, setMessages]),
   )
 
   async function addMember() {
@@ -194,18 +220,13 @@ export default function GroupeDetailScreen() {
       return
     }
 
-    setIsAddingMember(true)
-
     try {
-      await groupeService.addMembreByUsername(groupId, trimmedUsername)
-      await loadGroupContext()
+      await addMemberMutation.mutateAsync(trimmedUsername)
       setUsername('')
       setIsAddMemberOpen(false)
       Alert.alert('Membre ajouté', 'Le membre a été ajouté au groupe.')
     } catch (error) {
       setAddMemberError(toErrorMessage(error, 'Impossible d’ajouter ce membre.'))
-    } finally {
-      setIsAddingMember(false)
     }
   }
 
@@ -224,23 +245,18 @@ export default function GroupeDetailScreen() {
       return
     }
 
-    setIsUpdating(true)
-
     try {
-      const updatedGroupe = await groupeService.updateGroupe(groupId, {
-        description: editDescription.trim() || undefined,
+      await updateMutation.mutateAsync({
+        description: editDescription.trim(),
         name: trimmedName,
       })
 
-      setGroupe(updatedGroupe)
       Alert.alert(
         'Groupe modifié',
         'Les informations du groupe ont été mises à jour.',
       )
     } catch (error) {
       setSettingsError(toErrorMessage(error, 'Impossible de modifier ce groupe.'))
-    } finally {
-      setIsUpdating(false)
     }
   }
 
@@ -276,17 +292,14 @@ export default function GroupeDetailScreen() {
       return
     }
 
-    setIsDeleting(true)
     setSettingsError(null)
 
     try {
-      await groupeService.deleteGroupe(groupId)
+      await deleteMutation.mutateAsync()
       setIsSettingsOpen(false)
       router.back()
     } catch (error) {
       setSettingsError(toErrorMessage(error, 'Impossible de supprimer ce groupe.'))
-    } finally {
-      setIsDeleting(false)
     }
   }
 
@@ -321,17 +334,14 @@ export default function GroupeDetailScreen() {
       return
     }
 
-    setIsLeaving(true)
     setSettingsError(null)
 
     try {
-      await groupeService.removeMembreFromGroupe(groupId, currentUserId)
+      await leaveMutation.mutateAsync(currentUserId)
       setIsSettingsOpen(false)
       router.back()
     } catch (error) {
       setSettingsError(toErrorMessage(error, 'Impossible de quitter ce groupe.'))
-    } finally {
-      setIsLeaving(false)
     }
   }
 
@@ -409,7 +419,11 @@ export default function GroupeDetailScreen() {
         ) : null}
 
         <Pressable
-          onPress={() => setIsSettingsOpen(true)}
+          onPress={() => {
+            setEditName(groupe?.name ?? groupName)
+            setEditDescription(groupe?.description ?? '')
+            setIsSettingsOpen(true)
+          }}
           style={styles.headerIconButton}
         >
           <Text style={styles.headerIconText}>⚙</Text>
@@ -421,17 +435,27 @@ export default function GroupeDetailScreen() {
         showsVerticalScrollIndicator={false}
         style={styles.messagesArea}
       >
-        {isLoadingMessages ? (
+        {groupQuery.isError || membersQuery.isError ? (
+          <Text style={styles.errorText}>
+            {toErrorMessage(groupQuery.error ?? membersQuery.error, 'Impossible de charger le groupe.')}
+          </Text>
+        ) : null}
+
+        {groupQuery.isSuccess && !groupe ? (
+          <Text style={styles.errorText}>Ce groupe n’est plus accessible.</Text>
+        ) : null}
+
+        {groupe && isLoadingMessages ? (
           <Text style={styles.messagesMeta}>Chargement des messages...</Text>
         ) : null}
 
-        {!isLoadingMessages && messages.length === 0 ? (
+        {groupe && !isLoadingMessages && messages.length === 0 ? (
           <Text style={styles.messagesMeta}>
             Aucun message pour le moment.
           </Text>
         ) : null}
 
-        {messages.map((message) => {
+        {(groupe ? messages : []).map((message) => {
           const isOwnMessage = message.userId === currentUserId
           const profile = memberProfiles[message.userId]
 

@@ -20,7 +20,7 @@ type PredicationComponentProps = {
 }
 
 function formatDuration(durationSeconds?: number): string {
-  if (!durationSeconds) return 'Durée libre'
+  if (!durationSeconds) return ''
 
   const minutes = Math.max(1, Math.round(durationSeconds / 60))
 
@@ -54,10 +54,6 @@ export function PredicationComponent({
   return (
     <View style={styles.card}>
       <View style={styles.topLine}>
-        <View style={styles.badges}>
-          <Text style={styles.serie}>{categoryName ?? 'Prédication'}</Text>
-          <Text style={styles.mediaBadge}>Audio</Text>
-        </View>
         <Pressable
           disabled={isFavoriting}
           onPress={() => onToggleFavorite(predication)}
@@ -86,7 +82,7 @@ export function PredicationComponent({
 
         <View style={styles.info}>
           <Text style={styles.title}>{predication.title}</Text>
-          <Text style={styles.verse}>{categoryName ?? 'Prédication'}</Text>
+          {categoryName ? <Text style={styles.verse}>{categoryName}</Text> : null}
           <Text numberOfLines={1} style={styles.date}>
             {formatDate(predication.createdAt)}
           </Text>
@@ -153,14 +149,7 @@ const styles = StyleSheet.create({
   topLine: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  badges: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexShrink: 1,
-    flexWrap: 'wrap',
-    gap: 6,
+    justifyContent: 'flex-end',
   },
   main: {
     alignItems: 'center',
@@ -193,26 +182,6 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
     gap: 4,
-  },
-  serie: {
-    backgroundColor: colors.secondaryFixed,
-    borderRadius: 8,
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  mediaBadge: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 8,
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    fontWeight: '800',
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
   },
   favoriteIconButton: {
     alignItems: 'center',

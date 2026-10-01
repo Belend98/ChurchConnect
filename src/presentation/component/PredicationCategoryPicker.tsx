@@ -1,8 +1,10 @@
 import { categorieService } from '@/composition/categorie'
 import type { CategorieModel } from '@/domain/entités/Categorie'
+import { CATEGORIES_QUERY_KEY } from '@/presentation/queries/categorieQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
-import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import {
   Modal,
   Pressable,
@@ -24,21 +26,27 @@ export function PredicationCategoryPicker({
   onChange,
   value,
 }: PredicationCategoryPickerProps) {
-  const [categories, setCategories] = useState<CategorieModel[]>([])
+  const queryClient = useQueryClient()
+  const { data: categories = [] } = useQuery({
+    queryKey: CATEGORIES_QUERY_KEY,
+    queryFn: () => categorieService.listCategories(),
+    staleTime: Infinity,
+  })
   const [isOpen, setIsOpen] = useState(false)
-  const [isCreating, setIsCreating] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
 
-  useEffect(() => {
-    categorieService
-      .listCategories()
-      .then(setCategories)
-      .catch((loadError) => {
-        console.warn(loadError)
-        setLocalError(toErrorMessage(loadError))
-      })
-  }, [])
+  const createCategoryMutation = useMutation({
+    mutationFn: (nom: string) => categorieService.createCategorie({ nom }),
+    onSuccess: (categorie) => {
+      queryClient.setQueryData<CategorieModel[]>(
+        CATEGORIES_QUERY_KEY,
+        (current = []) =>
+          [...current.filter((item) => item.id !== categorie.id), categorie]
+            .sort((a, b) => a.nom.localeCompare(b.nom)),
+      )
+    },
+  })
 
   const selectedCategoryName =
     categories.find((categorie) => categorie.id === value)?.nom ??
@@ -53,18 +61,14 @@ export function PredicationCategoryPicker({
     }
 
     setLocalError(null)
-    setIsCreating(true)
 
     try {
-      const categorie = await categorieService.createCategorie({ nom })
-      setCategories((current) => [...current, categorie])
+      const categorie = await createCategoryMutation.mutateAsync(nom)
       onChange(categorie.id)
       setNewCategoryName('')
       setIsOpen(false)
     } catch (createError) {
       setLocalError(toErrorMessage(createError))
-    } finally {
-      setIsCreating(false)
     }
   }
 
@@ -151,12 +155,15 @@ export function PredicationCategoryPicker({
                 value={newCategoryName}
               />
               <Pressable
-                disabled={isCreating}
+                disabled={createCategoryMutation.isPending}
                 onPress={createCategory}
-                style={[styles.addButton, isCreating && styles.disabledButton]}
+                style={[
+                  styles.addButton,
+                  createCategoryMutation.isPending && styles.disabledButton,
+                ]}
               >
                 <Text style={styles.addButtonText}>
-                  {isCreating ? 'Ajout...' : 'Ajouter'}
+                  {createCategoryMutation.isPending ? 'Ajout...' : 'Ajouter'}
                 </Text>
               </Pressable>
             </View>

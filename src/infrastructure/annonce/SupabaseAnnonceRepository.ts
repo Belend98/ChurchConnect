@@ -5,7 +5,7 @@ import type {
 import type { AnnonceRepository } from '@/domain/repositories/AnnonceRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 
-type AnnonceRow = {
+export type AnnonceRow = {
   annonce_id: string
   titre: string
   contenu: string
@@ -18,7 +18,7 @@ type AnnonceRow = {
 const ANNONCE_SELECT =
   'annonce_id, titre, contenu, image_url, created_by, created_at, updated_at'
 
-function mapAnnonce(row: AnnonceRow): AnnonceModel {
+export function mapAnnonce(row: AnnonceRow): AnnonceModel {
   return {
     id: row.annonce_id,
     titre: row.titre,

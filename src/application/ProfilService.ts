@@ -35,11 +35,12 @@ export class ProfilService {
     })
 
     try {
-      await this.profilRepository.createProfile(userId, {
+      const profile = await this.profilRepository.createProfile(userId, {
         ...profileData,
         imageUrl: uploadedImage.publicUrl,
       })
       await this.deleteStoredImageQuietly(existingProfile?.imageUrl)
+      return profile
     } catch (error) {
       await this.deleteStoredImageQuietly(uploadedImage.publicUrl)
       throw error
@@ -72,7 +73,7 @@ export class ProfilService {
 
   async updateCurrentUserProfile(data: CreateProfilModel) {
     const userId = await this.authService.getCurrentUserIdOrThrow()
-    await this.profilRepository.updateProfile(userId, data)
+    return this.profilRepository.updateProfile(userId, data)
   }
 
   async deleteCurrentUserAccountData() {

@@ -2,6 +2,7 @@ export type UploadPredicationAudioInput = {
   fileName: string
   contentType: string
   audio: ArrayBuffer
+  onProgress?: (progress: number) => void
 }
 
 export type UploadedPredicationAudio = {

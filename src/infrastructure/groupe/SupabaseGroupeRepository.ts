@@ -6,7 +6,7 @@ import type {
 import type { GroupeRepository } from '@/domain/repositories/GroupeRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 
-type GroupeRow = {
+export type GroupeRow = {
   groupe_id: string
   name: string
   description: string | null
@@ -16,7 +16,7 @@ type GroupeRow = {
 
 const GROUPE_SELECT = 'groupe_id, name, description, created_by, created_at'
 
-function mapGroupe(row: GroupeRow): GroupeModel {
+export function mapGroupe(row: GroupeRow): GroupeModel {
   return {
     id: row.groupe_id,
     name: row.name,

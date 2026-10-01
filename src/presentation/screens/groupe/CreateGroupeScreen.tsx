@@ -1,6 +1,10 @@
 import { groupeService } from '@/composition/groupe'
+import type { CreateGroupeModel } from '@/domain/entités/Groupe'
+import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
+import { cacheGroupe, groupeKeys } from '@/presentation/queries/groupeQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import {
@@ -16,8 +20,20 @@ import {
 export default function CreateGroupeScreen() {
   const [description, setDescription] = useState('')
   const [errorText, setErrorText] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [name, setName] = useState('')
+  const userId = useCurrentUserId()
+  const queryClient = useQueryClient()
+  const createMutation = useMutation({
+    mutationFn: (data: Omit<CreateGroupeModel, 'createdBy'>) =>
+      groupeService.createGroupe(data),
+    onMutate: () => ({ userId }),
+    onSuccess: async (groupe, _data, context) => {
+      if (!context?.userId || context.userId !== userId) return
+      await queryClient.cancelQueries({ queryKey: groupeKeys.list(userId) })
+      if (userId) cacheGroupe(queryClient, userId, groupe, true)
+    },
+  })
+  const isSubmitting = createMutation.isPending
 
   async function createGroupe() {
     const trimmedName = name.trim()
@@ -30,10 +46,8 @@ export default function CreateGroupeScreen() {
       return
     }
 
-    setIsSubmitting(true)
-
     try {
-      await groupeService.createGroupe({
+      await createMutation.mutateAsync({
         description: trimmedDescription || undefined,
         name: trimmedName,
       })
@@ -42,8 +56,6 @@ export default function CreateGroupeScreen() {
       router.back()
     } catch (error) {
       setErrorText(toErrorMessage(error, 'Impossible de créer le groupe.'))
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -90,7 +102,7 @@ export default function CreateGroupeScreen() {
         {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
         <Pressable
-          disabled={isSubmitting}
+          disabled={isSubmitting || !userId}
           onPress={createGroupe}
           style={[styles.button, isSubmitting && styles.buttonDisabled]}
         >

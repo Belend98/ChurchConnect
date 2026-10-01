@@ -8,7 +8,7 @@ import {
 import type { ProfilRepository } from '@/domain/repositories/ProfilRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 
-type ProfilRow = {
+export type ProfilRow = {
   id: string
   username: string | null
   nom: string | null
@@ -30,7 +30,7 @@ function toAppRole(role: string | null): AppRole {
   return DEFAULT_APP_ROLE
 }
 
-function mapProfil(data: ProfilRow): ProfilModel {
+export function mapProfil(data: ProfilRow): ProfilModel {
   const roleApp = toAppRole(data.role_app)
 
   return {
@@ -50,8 +50,8 @@ function mapProfil(data: ProfilRow): ProfilModel {
 }
 
 export class SupabaseProfilRepository implements ProfilRepository {
-  async createProfile(userId: string, data: CreateProfilModel): Promise<void> {
-    const { error } = await supabase.from('user_profil').upsert(
+  async createProfile(userId: string, data: CreateProfilModel): Promise<ProfilModel> {
+    const { data: profile, error } = await supabase.from('user_profil').upsert(
       {
         id: userId,
         username: data.username ?? null,
@@ -66,9 +66,10 @@ export class SupabaseProfilRepository implements ProfilRepository {
       {
         onConflict: 'id',
       },
-    )
+    ).select(PROFIL_SELECT).single()
 
     if (error) throw error
+    return mapProfil(profile as ProfilRow)
   }
 
   async findByUsername(username: string): Promise<ProfilModel | null> {
@@ -128,8 +129,8 @@ export class SupabaseProfilRepository implements ProfilRepository {
     return ((data ?? []) as ProfilRow[]).map(mapProfil)
   }
 
-  async updateProfile(userId: string, data: CreateProfilModel): Promise<void> {
-    const { error } = await supabase
+  async updateProfile(userId: string, data: CreateProfilModel): Promise<ProfilModel> {
+    const { data: profile, error } = await supabase
       .from('user_profil')
       .update({
         username: data.username ?? null,
@@ -142,8 +143,11 @@ export class SupabaseProfilRepository implements ProfilRepository {
         ...(data.isAdmin !== undefined ? { is_admin: data.isAdmin } : {}),
       })
       .eq('id', userId)
+      .select(PROFIL_SELECT)
+      .single()
 
     if (error) throw error
+    return mapProfil(profile as ProfilRow)
   }
 
   async deleteAccountData(): Promise<void> {

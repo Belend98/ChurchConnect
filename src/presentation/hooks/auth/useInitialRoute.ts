@@ -1,31 +1,15 @@
-import { authService } from '@/composition/Auth'
-import { profilService } from '@/composition/profil'
+import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { router } from 'expo-router'
 import { useEffect } from 'react'
 
 export function useInitialRoute() {
+  const { data: profile, userId, isSessionLoading, isPending, isError } = useCurrentProfile()
   useEffect(() => {
-    const handleInitialRedirect = async () => {
-      try {
-        const user = await authService.getCurrentUser()
-
-        if (!user) {
-          router.replace('/(auth)/signup')
-          return
-        }
-
-        const profile = await profilService.getMyProfile(user.id)
-        if (profile) {
-          router.replace('/(tabs)/home')
-        } else {
-          router.replace('/(auth)/profil')
-        }
-      } catch (error) {
-        console.error('Erreur lors de la récupération du profil:', error)
-        router.replace('/(auth)/signup')
-      }
+    if (isSessionLoading || (userId && isPending)) return
+    if (!userId || isError) {
+      router.replace('/(auth)/signup')
+    } else {
+      router.replace(profile ? '/(tabs)/home' : '/(auth)/profil')
     }
-
-    void handleInitialRedirect()
-  }, [])
+  }, [profile, userId, isSessionLoading, isPending, isError])
 }

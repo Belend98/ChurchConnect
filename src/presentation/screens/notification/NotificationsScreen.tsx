@@ -1,9 +1,12 @@
 import { notificationService } from '@/composition/notification'
 import type { NotificationModel } from '@/domain/entités/Notification'
+import { useNotifications } from '@/presentation/hooks/notification/useNotifications'
+import { applyNotificationChange } from '@/presentation/queries/notificationQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
-import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { router } from 'expo-router'
+import { useState } from 'react'
 import {
   Pressable,
   ScrollView,
@@ -11,17 +14,6 @@ import {
   Text,
   View,
 } from 'react-native'
-
-function appendNotificationUnique(
-  items: NotificationModel[],
-  notification: NotificationModel,
-) {
-  if (items.some((item) => item.id === notification.id)) return items
-
-  return [notification, ...items].sort(
-    (first, second) => second.createdAt.getTime() - first.createdAt.getTime(),
-  )
-}
 
 function formatNotificationDate(date: Date) {
   return date.toLocaleDateString('fr-FR', {
@@ -39,94 +31,53 @@ function getTypeLabel(notification: NotificationModel) {
 
 export default function NotificationsScreen() {
   const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false)
-  const [notifications, setNotifications] = useState<NotificationModel[]>([])
-
-  const unreadCount = notifications.filter(
-    (notification) => !notification.isRead,
-  ).length
-
-  const loadNotifications = useCallback(async () => {
-    setError(null)
-    setIsLoading(true)
-
-    try {
-      const notificationItems =
-        await notificationService.listMyNotifications()
-      setNotifications(notificationItems)
-    } catch (loadError) {
-      console.warn(loadError)
-      setNotifications([])
-      setError(
-        toErrorMessage(loadError, 'Impossible de charger les notifications.'),
-      )
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useFocusEffect(
-    useCallback(() => {
-      let isMounted = true
-      let unsubscribe: (() => void) | undefined
-
-      loadNotifications()
-
-      notificationService
-        .subscribeToMyNotifications((notification) => {
-          if (!isMounted) return
-          setNotifications((currentNotifications) =>
-            appendNotificationUnique(currentNotifications, notification),
-          )
-        })
-        .then((unsubscribeNotification) => {
-          unsubscribe = unsubscribeNotification
-        })
-        .catch((subscribeError) => {
-          console.warn(subscribeError)
-        })
-
-      return () => {
-        isMounted = false
-        unsubscribe?.()
+  const queryClient = useQueryClient()
+  const {
+    data: notifications = [], userId, unreadCount,
+    isPending: isLoading, error: loadError, isError, refetch,
+  } = useNotifications()
+  const markAllMutation = useMutation({
+    mutationFn: () => notificationService.markAllMyNotificationsAsRead(),
+    onMutate: () => ({ userId }),
+    onSuccess: (items, _variables, context) => {
+      if (userId && context?.userId === userId) {
+        return applyNotificationChange(queryClient, userId, { type: 'read', notifications: items })
       }
-    }, [loadNotifications]),
-  )
+    },
+  })
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => notificationService.markMyNotificationAsRead(id),
+    onMutate: () => ({ userId }),
+    onSuccess: (item, id, context) => {
+      if (userId && context?.userId === userId) {
+        return applyNotificationChange(queryClient, userId, item
+          ? { type: 'read', notifications: [item] }
+          : { type: 'delete', id })
+      }
+    },
+  })
+  const isMarkingAllAsRead = markAllMutation.isPending
 
   async function markAllAsRead() {
-    setIsMarkingAllAsRead(true)
     setError(null)
 
     try {
-      await notificationService.markAllMyNotificationsAsRead()
-      setNotifications((currentNotifications) =>
-        currentNotifications.map((notification) => ({
-          ...notification,
-          isRead: true,
-        })),
-      )
+      await markAllMutation.mutateAsync()
     } catch (markError) {
       setError(
         toErrorMessage(markError, 'Impossible de marquer les notifications.'),
       )
-    } finally {
-      setIsMarkingAllAsRead(false)
     }
   }
 
   async function openNotification(notification: NotificationModel) {
+    setError(null)
     if (!notification.isRead) {
-      setNotifications((currentNotifications) =>
-        currentNotifications.map((item) =>
-          item.id === notification.id ? { ...item, isRead: true } : item,
-        ),
-      )
-
       try {
-        await notificationService.markMyNotificationAsRead(notification.id)
+        await markReadMutation.mutateAsync(notification.id)
       } catch (markError) {
-        console.warn(markError)
+        setError(toErrorMessage(markError, 'Impossible de marquer cette notification.'))
+        return
       }
     }
 
@@ -189,7 +140,7 @@ export default function NotificationsScreen() {
           <Text style={styles.metaText}>Chargement des notifications...</Text>
         ) : null}
 
-        {!isLoading && notifications.length === 0 ? (
+        {!isLoading && !isError && notifications.length === 0 ? (
           <Text style={styles.metaText}>
             Aucune notification pour le moment.
           </Text>
@@ -197,6 +148,7 @@ export default function NotificationsScreen() {
 
         {notifications.map((notification) => (
           <Pressable
+            disabled={markReadMutation.isPending}
             key={notification.id}
             onPress={() => openNotification(notification)}
             style={[
@@ -221,6 +173,16 @@ export default function NotificationsScreen() {
         ))}
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {isError ? (
+          <View>
+            <Text style={styles.errorText}>
+              {toErrorMessage(loadError, 'Impossible de charger les notifications.')}
+            </Text>
+            <Pressable onPress={() => void refetch()}>
+              <Text style={styles.metaText}>Réessayer</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   )

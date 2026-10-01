@@ -1,6 +1,10 @@
 import { annonceService } from '@/composition/annonce'
+import type { CreateAnnonceModel } from '@/domain/entités/Annonce'
+import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
+import { applyAnnonceChange } from '@/presentation/queries/annonceQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import {
@@ -17,8 +21,19 @@ export default function CreateAnnonceScreen() {
   const [contenu, setContenu] = useState('')
   const [errorText, setErrorText] = useState<string | null>(null)
   const [imageUrl, setImageUrl] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [titre, setTitre] = useState('')
+  const userId = useCurrentUserId()
+  const queryClient = useQueryClient()
+  const createMutation = useMutation({
+    mutationFn: (data: Omit<CreateAnnonceModel, 'createdBy'>) =>
+      annonceService.createAnnonce(data),
+    onMutate: () => ({ userId }),
+    onSuccess: (annonce, _data, context) => {
+      if (!context?.userId || context.userId !== userId) return
+      return applyAnnonceChange(queryClient, userId, { type: 'upsert', annonce })
+    },
+  })
+  const isSubmitting = createMutation.isPending
 
   async function createAnnonce() {
     const trimmedTitre = titre.trim()
@@ -37,10 +52,8 @@ export default function CreateAnnonceScreen() {
       return
     }
 
-    setIsSubmitting(true)
-
     try {
-      await annonceService.createAnnonce({
+      await createMutation.mutateAsync({
         titre: trimmedTitre,
         contenu: trimmedContenu,
         imageUrl: trimmedImageUrl || undefined,
@@ -50,8 +63,6 @@ export default function CreateAnnonceScreen() {
       router.back()
     } catch (error) {
       setErrorText(toErrorMessage(error, "Impossible de créer l'annonce."))
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -110,7 +121,7 @@ export default function CreateAnnonceScreen() {
         {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
         <Pressable
-          disabled={isSubmitting}
+          disabled={isSubmitting || !userId}
           onPress={createAnnonce}
           style={[styles.button, isSubmitting && styles.buttonDisabled]}
         >
