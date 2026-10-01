@@ -1,13 +1,13 @@
 import { authService } from '@/composition/Auth'
-import { predicationService } from '@/composition/predication'
+import { usePredications } from '@/presentation/hooks/predication/usePredications'
+import { usePredicationFavorites } from '@/presentation/hooks/predication/usePredicationFavorites'
 import type { PredicationModel } from '@/domain/entités/Predication'
 import { getAppRoleLabel, type ProfilModel } from '@/domain/entités/Profil'
 import { useGroupes } from '@/presentation/hooks/groupe/useGroupes'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
-import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { router } from 'expo-router'
 import {
   Alert,
   Image,
@@ -17,16 +17,6 @@ import {
   Text,
   View,
 } from 'react-native'
-
-type EspaceStats = {
-  favorites: number
-  predications: number
-}
-
-const initialStats: EspaceStats = {
-  favorites: 0,
-  predications: 0,
-}
 
 function getDisplayName(profile: ProfilModel | null): string {
   if (!profile) return 'Mon espace'
@@ -38,54 +28,14 @@ function getDisplayName(profile: ProfilModel | null): string {
 
 export default function MonEspaceScreen() {
   const { data: groupes = [], isPending: isLoadingGroupes } = useGroupes()
-  const [errorText, setErrorText] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [favoritePredications, setFavoritePredications] = useState<
-    PredicationModel[]
-  >([])
   const { data: profile = null, email, error: profileError } = useCurrentProfile()
-  const [stats, setStats] = useState<EspaceStats>(initialStats)
-
-  useFocusEffect(
-    useCallback(() => {
-      let isMounted = true
-      setIsLoading(true)
-      setErrorText(null)
-
-      Promise.all([
-        predicationService.listPredications(),
-        predicationService.listMyFavorites().catch(() => []),
-      ])
-        .then(([predications, favorites]) => {
-          if (!isMounted) return
-          const favoriteIds = new Set(
-            favorites.map((favorite) => favorite.predicationId),
-          )
-
-          setFavoritePredications(
-            predications.filter((predication) => favoriteIds.has(predication.id)),
-          )
-          setStats({
-            favorites: favorites.length,
-            predications: predications.length,
-          })
-        })
-        .catch((error) => {
-          if (!isMounted) return
-          console.warn(error)
-          setErrorText(toErrorMessage(error))
-          setFavoritePredications([])
-          setStats(initialStats)
-        })
-        .finally(() => {
-          if (isMounted) setIsLoading(false)
-        })
-
-      return () => {
-        isMounted = false
-      }
-    }, []),
-  )
+  const { data: predications = [], isPending: isLoadingPredications, error: predicationsError } = usePredications()
+  const { data: favoriteIds = [], isPending: isLoadingFavorites, error: favoritesError } = usePredicationFavorites()
+  const isLoading = isLoadingPredications || isLoadingFavorites
+  const favoriteIdSet = new Set(favoriteIds)
+  const favoritePredications = predications.filter((predication) => favoriteIdSet.has(predication.id))
+  const error = predicationsError ?? favoritesError
+  const errorText = error ? toErrorMessage(error) : null
 
   async function signOut() {
     try {
@@ -167,13 +117,13 @@ export default function MonEspaceScreen() {
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statValue}>
-            {isLoading ? '...' : stats.predications}
+            {isLoadingPredications ? '...' : predications.length}
           </Text>
           <Text style={styles.statLabel}>Prédications</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statValue}>
-            {isLoading ? '...' : stats.favorites}
+            {isLoadingFavorites ? '...' : favoriteIds.length}
           </Text>
           <Text style={styles.statLabel}>Favoris</Text>
         </View>
@@ -230,7 +180,7 @@ export default function MonEspaceScreen() {
           </Pressable>
         ))}
 
-        {!isLoading && favoritePredications.length === 0 ? (
+        {!isLoading && !error && favoritePredications.length === 0 ? (
           <View style={styles.emptyFavorites}>
             <Text style={styles.emptyFavoritesText}>
               Aucune prédication favorite pour le moment.

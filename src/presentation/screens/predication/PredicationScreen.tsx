@@ -17,6 +17,9 @@ import { predicationService } from '@/composition/predication'
 import type { CategorieModel } from '@/domain/entités/Categorie'
 import type { PredicationModel } from '@/domain/entités/Predication'
 import { canManagePredications } from '@/domain/entités/Profil'
+import { usePredications } from '@/presentation/hooks/predication/usePredications'
+import { usePredicationFavorites } from '@/presentation/hooks/predication/usePredicationFavorites'
+import { useTogglePredicationFavorite } from '@/presentation/hooks/predication/useTogglePredicationFavorite'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { CATEGORIES_QUERY_KEY } from '@/presentation/queries/categorieQueries'
 import { PREDICATIONS_QUERY_KEY } from '@/presentation/queries/predicationQueries'
@@ -33,8 +36,6 @@ export default function PredicationScreen() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null)
   const [editingCategoryName, setEditingCategoryName] = useState('')
-  const [favoriteById, setFavoriteById] = useState<Record<string, boolean>>({})
-  const [favoritingId, setFavoritingId] = useState<string | null>(null)
   const { data: profile, isError: isProfileError } = useCurrentProfile()
   const canManagePredicationItems = !isProfileError && canManagePredications(profile?.roleApp)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
@@ -52,11 +53,10 @@ export default function PredicationScreen() {
     error: predicationsError,
     isError: isPredicationsError,
     isLoading,
-  } = useQuery({
-    queryKey: PREDICATIONS_QUERY_KEY,
-    queryFn: () => predicationService.listPredications(),
-    staleTime: Infinity,
-  })
+  } = usePredications()
+  const { data: favoriteIds = [] } = usePredicationFavorites()
+  const favoriteIdSet = new Set(favoriteIds)
+  const toggleFavoriteMutation = useTogglePredicationFavorite()
   const { data: categories = [] } = useQuery({
     queryKey: CATEGORIES_QUERY_KEY,
     queryFn: () => categorieService.listCategories(),
@@ -108,7 +108,6 @@ export default function PredicationScreen() {
 
     async function loadEngagement() {
       if (predications.length === 0) {
-        setFavoriteById({})
         setLikedById({})
         setLikesById({})
         return
@@ -116,13 +115,12 @@ export default function PredicationScreen() {
 
       const engagementEntries = await Promise.all(
         predications.map(async (item) => {
-          const [likes, isFavorite, isLiked] = await Promise.all([
+          const [likes, isLiked] = await Promise.all([
             predicationService.countLikes(item.id),
-            predicationService.isFavoriteByCurrentUser(item.id),
             predicationService.isLikedByCurrentUser(item.id),
           ])
 
-          return [item.id, { isFavorite, isLiked, likes }] as const
+          return [item.id, { isLiked, likes }] as const
         }),
       )
 
@@ -133,14 +131,6 @@ export default function PredicationScreen() {
           engagementEntries.map(([id, engagement]) => [
             id,
             engagement.isLiked,
-          ]),
-        ),
-      )
-      setFavoriteById(
-        Object.fromEntries(
-          engagementEntries.map(([id, engagement]) => [
-            id,
-            engagement.isFavorite,
           ]),
         ),
       )
@@ -157,7 +147,6 @@ export default function PredicationScreen() {
     loadEngagement().catch((error) => {
       if (!isMounted) return
       console.warn(error)
-      setFavoriteById({})
       setLikedById({})
       setLikesById({})
     })
@@ -397,35 +386,16 @@ export default function PredicationScreen() {
   }
 
   async function toggleFavorite(predication: PredicationModel) {
-    if (favoritingId) return
-
-    const wasFavorite = Boolean(favoriteById[predication.id])
-
-    setFavoritingId(predication.id)
-    setFavoriteById((current) => ({
-      ...current,
-      [predication.id]: !wasFavorite,
-    }))
+    if (toggleFavoriteMutation.isPending) return
 
     try {
-      const isFavorite = await predicationService.toggleFavorite(predication.id)
-
-      setFavoriteById((current) => ({
-        ...current,
-        [predication.id]: isFavorite,
-      }))
+      await toggleFavoriteMutation.mutateAsync(predication.id)
     } catch (error) {
       console.warn(error)
-      setFavoriteById((current) => ({
-        ...current,
-        [predication.id]: wasFavorite,
-      }))
       Alert.alert(
         'Favori impossible',
         toErrorMessage(error, "Une erreur est survenue pendant l'ajout favori."),
       )
-    } finally {
-      setFavoritingId(null)
     }
   }
 
@@ -534,8 +504,8 @@ export default function PredicationScreen() {
             canManagePredication={canManagePredicationItems}
             categoryName={categories.find((categorie) => categorie.id === predication.categorieId)?.nom}
             isDeleting={deletingId === predication.id}
-            isFavorite={Boolean(favoriteById[predication.id])}
-            isFavoriting={favoritingId === predication.id}
+            isFavorite={favoriteIdSet.has(predication.id)}
+            isFavoriting={toggleFavoriteMutation.isPending && toggleFavoriteMutation.variables === predication.id}
             isLiked={Boolean(likedById[predication.id])}
             isLiking={likingId === predication.id}
             key={predication.id}

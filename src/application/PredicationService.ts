@@ -153,8 +153,7 @@ export class PredicationService {
     return this.likeRepository.countByPredication(predicationId)
   }
 
-  async listMyFavorites(): Promise<PredicationFavoriteModel[]> {
-    const userId = await this.authService.getCurrentUserIdOrThrow()
+  listFavoritesByUser(userId: string): Promise<PredicationFavoriteModel[]> {
     return this.favoriteRepository.listByUser(userId)
   }
 

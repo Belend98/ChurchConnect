@@ -4,6 +4,7 @@ import { useNotificationsRealtime } from '@/presentation/hooks/realtime/useNotif
 import { useGroupesRealtime } from '@/presentation/hooks/realtime/useGroupesRealtime'
 import { usePredicationCategoriesRealtime } from '@/presentation/hooks/realtime/usePredicationCategoriesRealtime'
 import { usePredicationsRealtime } from '@/presentation/hooks/realtime/usePredicationsRealtime'
+import { usePredicationFavoritesRealtime } from '@/presentation/hooks/realtime/usePredicationFavoritesRealtime'
 
 export function RealtimeSync() {
   useCurrentProfileRealtime()
@@ -12,6 +13,7 @@ export function RealtimeSync() {
   useGroupesRealtime()
   usePredicationCategoriesRealtime()
   usePredicationsRealtime()
+  usePredicationFavoritesRealtime()
 
   return null
 }

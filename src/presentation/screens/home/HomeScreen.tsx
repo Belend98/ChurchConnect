@@ -13,6 +13,7 @@ import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { useQuery } from '@tanstack/react-query'
 import { router, useFocusEffect } from 'expo-router'
+import { SymbolView } from 'expo-symbols'
 import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
@@ -106,10 +107,16 @@ export default function HomeScreen() {
             </View>
           </View>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
             onPress={() => router.push('/notifications' as never)}
             style={styles.notificationButton}
           >
-            <Text style={styles.notificationButtonText}>N</Text>
+            <SymbolView
+              name={{ ios: 'bell', android: 'notifications', web: 'notifications' }}
+              size={20}
+              tintColor={colors.primary}
+            />
             {notificationUnreadCount > 0 ? (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -118,18 +125,10 @@ export default function HomeScreen() {
               </View>
             ) : null}
           </Pressable>
-          <Pressable
-            onPress={() => router.push('/(tabs)/mon-espace' as never)}
-            style={styles.profileButton}
-          >
-            <Text style={styles.profileButtonText}>
-              {(profileName ?? 'M').charAt(0).toUpperCase()}
-            </Text>
-          </Pressable>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Annonces</Text>
+          <Text style={styles.sectionTitle}>Annonce</Text>
         </View>
 
         <View style={styles.annonceCard}>
@@ -349,11 +348,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
     position: 'relative',
     width: 36,
-  },
-  notificationButtonText: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '900',
   },
   notificationBadge: {
     alignItems: 'center',

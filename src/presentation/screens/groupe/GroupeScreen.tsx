@@ -32,7 +32,6 @@ export default function GroupeScreen() {
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.eyebrow}>Communauté</Text>
             <Text style={styles.title}>Mes groupes</Text>
           </View>
           <Pressable onPress={openCreateGroupe} style={styles.headerButton}>
