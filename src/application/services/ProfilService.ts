@@ -1,8 +1,9 @@
-import type { AuthService } from '@/application/AuthService'
+import type { AuthService } from '@/application/services/AuthService'
+import type { DeleteAccountUseCase } from '@/application/services/DeleteAccountUseCase'
 import type { CreateProfilModel } from '@/domain/entités/Profil'
 import type {
-  ImageStorage,
-  UploadImageInput,
+    ImageStorage,
+    UploadImageInput,
 } from '@/domain/repositories/ImageStorage'
 import type { ProfilRepository } from '@/domain/repositories/ProfilRepository'
 
@@ -15,6 +16,7 @@ export class ProfilService {
     private readonly profilRepository: ProfilRepository,
     private readonly authService: AuthService,
     private readonly imageStorage: ImageStorage,
+    private readonly deleteAccountUseCase: DeleteAccountUseCase,
   ) {}
 
   createProfile(userId: string, data: CreateProfilModel) {
@@ -77,8 +79,7 @@ export class ProfilService {
   }
 
   async deleteCurrentUserAccountData() {
-    const userId = await this.authService.getCurrentUserIdOrThrow()
-    await this.profilRepository.deleteAccountData(userId)
+    await this.deleteAccountUseCase.execute()
   }
 
   private async deleteStoredImageQuietly(imageUrl?: string): Promise<void> {

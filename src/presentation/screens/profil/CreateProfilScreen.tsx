@@ -12,7 +12,6 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { authService } from '@/composition/Auth'
 import { colors } from '@/shared/theme/colors'
 import {
   createUserSchema,
@@ -22,6 +21,7 @@ import {
 import { profilService } from '@/composition/profil'
 import { useImageFilePicker } from '@/presentation/hooks/useImageFilePicker'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
+import { BirthDateField } from '@/presentation/component/BirthDateField'
 import { cacheCurrentProfile } from '@/presentation/queries/profilQueries'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -114,15 +114,6 @@ const ProfileSetupScreen = () => {
     },
   })
   const isSaving = isSubmitting || saveProfileMutation.isPending
-
-  const handleSignOut = async () => {
-    try {
-      await authService.signOut()
-      router.replace('/(auth)/signup')
-    } catch {
-      Alert.alert('Erreur', 'Impossible de se deconnecter')
-    }
-  }
 
   const onSubmit = async (data: CreateUserInput) => {
     setErrorText(null)
@@ -255,13 +246,11 @@ const ProfileSetupScreen = () => {
         control={control}
         name="dateNaissance"
         render={({ field: { onChange, onBlur, value } }) => (
-          <TextInput
-            style={styles.input}
-            placeholder="AAAA-MM-JJ"
-            keyboardType="numbers-and-punctuation"
+          <BirthDateField
             value={value}
-            onChangeText={onChange}
+            onChange={onChange}
             onBlur={onBlur}
+            disabled={isSaving}
           />
         )}
       />
@@ -284,9 +273,6 @@ const ProfileSetupScreen = () => {
         </Text>
       </Pressable>
 
-      <Pressable onPress={handleSignOut} style={styles.signOutButton}>
-        <Text style={styles.signOutButtonText}>Se deconnecter</Text>
-      </Pressable>
     </ScrollView>
   )
 }
@@ -396,19 +382,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontWeight: '700',
-  },
-  signOutButton: {
-    marginTop: 12,
-    height: 46,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderColor: colors.error,
-    borderWidth: 1,
-  },
-  signOutButtonText: {
-    color: colors.error,
-    fontWeight: '600',
   },
   errorText: {
     color: colors.error,

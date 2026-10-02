@@ -1,8 +1,8 @@
-import { GroupeService } from '@/application/GroupeService'
+import { GroupeService } from '@/application/services/GroupeService'
 import { authService } from '@/composition/Auth'
-import { SupabaseProfilRepository } from '@/infrastructure/profil/SupabaseProfilRepository'
 import { SupabaseGroupeMembreRepository } from '@/infrastructure/groupe/SupabaseGroupeMembreRepository'
 import { SupabaseGroupeRepository } from '@/infrastructure/groupe/SupabaseGroupeRepository'
+import { SupabaseProfilRepository } from '@/infrastructure/profil/SupabaseProfilRepository'
 
 const groupeRepository = new SupabaseGroupeRepository()
 const groupeMembreRepository = new SupabaseGroupeMembreRepository()

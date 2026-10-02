@@ -1,5 +1,6 @@
 import type { CreateProfilModel } from '../entités/Profil'
 import { z } from 'zod'
+import { formatDateOnly, isValidDateOnly } from '@/shared/utils/dateOnly'
 
 export const createUserSchema = z.object({
   username: z
@@ -29,8 +30,11 @@ export const createUserSchema = z.object({
   dateNaissance: z
     .string()
     .trim()
-    .refine((value) => !value || !Number.isNaN(Date.parse(value)), {
+    .refine((value) => !value || isValidDateOnly(value), {
       message: 'La date de naissance est invalide',
+    })
+    .refine((value) => !value || value <= formatDateOnly(new Date()), {
+      message: 'Date de naissance invalide',
     })
     .transform((value) => (value ? new Date(value) : undefined))
     .optional(),

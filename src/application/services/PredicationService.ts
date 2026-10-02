@@ -1,16 +1,16 @@
-import type { AuthService } from '@/application/AuthService'
+import type { AuthService } from '@/application/services/AuthService'
+import type {
+    CreatePredicationModel,
+    PredicationModel,
+    UpdatePredicationModel,
+} from '@/domain/entités/Predication'
 import type { PredicationFavoriteModel } from '@/domain/entités/PredicationEngagement/PredicationFavorite'
 import type {
-  CreatePredicationModel,
-  PredicationModel,
-  UpdatePredicationModel,
-} from '@/domain/entités/Predication'
+    PredicationAudioStorage,
+    UploadPredicationAudioInput,
+} from '@/domain/repositories/PredicationAudioStorage'
 import type { PredicationFavoriteRepository } from '@/domain/repositories/PredicationEngagement/PredicationFavoriteRepository'
 import type { PredicationLikeRepository } from '@/domain/repositories/PredicationEngagement/PredicationLikeRepository'
-import type {
-  PredicationAudioStorage,
-  UploadPredicationAudioInput,
-} from '@/domain/repositories/PredicationAudioStorage'
 import type { PredicationRepository } from '@/domain/repositories/PredicationRepository'
 
 export type CreatePredicationWithAudioInput = Omit<

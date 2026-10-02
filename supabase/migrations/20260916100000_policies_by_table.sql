@@ -1,105 +1,4 @@
--- Helper functions used by the table policies.
-
-create or replace function public.is_app_admin()
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.user_profil
-    where id = auth.uid()
-      and (
-        is_admin = true
-        or role_app in ('pasteur', 'admin')
-      )
-  );
-$$;
-
-create or replace function public.can_manage_predications()
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.user_profil
-    where id = auth.uid()
-      and role_app in ('pasteur', 'admin')
-  );
-$$;
-
-create or replace function public.can_manage_annonces()
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.user_profil
-    where id = auth.uid()
-      and role_app in ('pasteur', 'admin')
-  );
-$$;
-
-create or replace function public.is_group_member(target_groupe_id uuid)
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.groupe_membre
-    where groupe_id = target_groupe_id
-      and user_id = auth.uid()
-  );
-$$;
-
-create or replace function public.is_group_admin(target_groupe_id uuid)
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.groupe_membre
-    where groupe_id = target_groupe_id
-      and user_id = auth.uid()
-      and is_group_admin = true
-  );
-$$;
-
-create or replace function public.is_group_creator(target_groupe_id uuid)
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.groupe
-    where groupe_id = target_groupe_id
-      and created_by = auth.uid()
-  );
-$$;
-
-create or replace function public.can_manage_group(target_groupe_id uuid)
-returns boolean
-language sql
-security definer
-set search_path = public
-as $$
-  select
-    public.is_group_creator(target_groupe_id)
-    or public.is_group_admin(target_groupe_id);
-$$;
-
--- user_profil
+begin;
 
 alter table public.user_profil enable row level security;
 
@@ -133,8 +32,6 @@ for delete
 to authenticated
 using (id = auth.uid());
 
--- categorie_predication
-
 alter table public.categorie_predication enable row level security;
 
 drop policy if exists "categorie_predication_select_authenticated" on public.categorie_predication;
@@ -166,8 +63,6 @@ on public.categorie_predication
 for delete
 to authenticated
 using (public.is_app_admin());
-
--- predication
 
 alter table public.predication enable row level security;
 
@@ -204,8 +99,6 @@ for delete
 to authenticated
 using (public.can_manage_predications());
 
--- predication_likes
-
 alter table public.predication_likes enable row level security;
 
 drop policy if exists "predication_likes_select_authenticated" on public.predication_likes;
@@ -230,8 +123,6 @@ for delete
 to authenticated
 using (user_id = auth.uid());
 
--- predication_favorites
-
 alter table public.predication_favorites enable row level security;
 
 drop policy if exists "predication_favorites_select_own" on public.predication_favorites;
@@ -255,8 +146,6 @@ on public.predication_favorites
 for delete
 to authenticated
 using (user_id = auth.uid());
-
--- groupe
 
 alter table public.groupe enable row level security;
 
@@ -289,13 +178,14 @@ to authenticated
 using (public.can_manage_group(groupe_id))
 with check (public.can_manage_group(groupe_id));
 
-create policy "groupe_delete_creator_only"
+drop policy if exists groupe_delete_admin_only on public.groupe;
+drop policy if exists groupe_delete_creator_only on public.groupe;
+drop policy if exists groupe_delete_creator_or_pastor on public.groupe;
+create policy groupe_delete_creator_or_pastor
 on public.groupe
 for delete
 to authenticated
-using (public.is_group_creator(groupe_id));
-
--- groupe_membre
+using (public.can_delete_group(groupe_id));
 
 alter table public.groupe_membre enable row level security;
 
@@ -345,8 +235,6 @@ using (
   or public.can_manage_group(groupe_id)
 );
 
--- annonce
-
 alter table public.annonce enable row level security;
 
 drop policy if exists "annonce_select_authenticated" on public.annonce;
@@ -381,8 +269,6 @@ on public.annonce
 for delete
 to authenticated
 using (public.can_manage_annonces());
-
--- message_groupe
 
 alter table public.message_groupe enable row level security;
 
@@ -423,8 +309,6 @@ using (
   or public.can_manage_group(groupe_id)
 );
 
--- notification
-
 alter table public.notification enable row level security;
 
 drop policy if exists "notification_select_own" on public.notification;
@@ -449,8 +333,6 @@ on public.notification
 for delete
 to authenticated
 using (user_id = auth.uid());
-
--- storage.objects
 
 drop policy if exists "church_images_select_authenticated" on storage.objects;
 drop policy if exists "church_images_profile_insert_own" on storage.objects;
@@ -575,3 +457,29 @@ using (
   bucket_id = 'predications-audio'
   and public.can_manage_predications()
 );
+
+do $$
+declare
+  target_table text;
+begin
+  foreach target_table in array array[
+    'user_profil', 'categorie_predication', 'predication',
+    'predication_favorites', 'predication_likes', 'groupe',
+    'groupe_membre', 'annonce', 'message_groupe', 'notification'
+  ] loop
+    execute format('drop policy if exists require_active_account_session on public.%I', target_table);
+    execute format(
+      'create policy require_active_account_session on public.%I as restrictive for all to authenticated using ((select public.is_active_account_session())) with check ((select public.is_active_account_session()))',
+      target_table
+    );
+  end loop;
+end;
+$$;
+
+drop policy if exists require_active_account_session on storage.objects;
+create policy require_active_account_session on storage.objects
+as restrictive for all to authenticated
+using ((select public.is_active_account_session()))
+with check ((select public.is_active_account_session()));
+
+commit;

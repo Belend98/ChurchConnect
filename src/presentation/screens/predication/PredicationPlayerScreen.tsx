@@ -4,6 +4,7 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
 import {
+  ActivityIndicator,
   type DimensionValue,
   type GestureResponderEvent,
   type LayoutChangeEvent,
@@ -14,7 +15,7 @@ import {
   View,
 } from 'react-native'
 
-const speeds = [1, 1.25, 1.5, 0.75]
+const speeds = [0.75, 1, 1.25, 1.5]
 const RESUME_THRESHOLD_SECONDS = 10
 
 function formatTime(seconds?: number | null): string {
@@ -42,8 +43,9 @@ export default function PredicationPlayerScreen() {
     serie?: string
     durationSeconds?: string
   }>()
-  const [speedIndex, setSpeedIndex] = useState(0)
-   const [hasRestoredProgress, setHasRestoredProgress] = useState(false)
+  const [speedIndex, setSpeedIndex] = useState(1)
+  const [hasRestoredProgress, setHasRestoredProgress] = useState(false)
+  const [controlError, setControlError] = useState<string | null>(null)
   const [progressTrackWidth, setProgressTrackWidth] = useState(0)
 
   const audioSource = useMemo(() => params.mediaUrl ?? null, [params.mediaUrl])
@@ -53,6 +55,8 @@ export default function PredicationPlayerScreen() {
     updateInterval: 500,
   })
   const status = useAudioPlayerStatus(player)
+  const canControl = Boolean(params.mediaUrl) && status.isLoaded && !status.error
+  const isLoading = Boolean(params.mediaUrl) && !status.error && !status.isLoaded
 
   const title = params.title ?? 'Prédication'
   const speaker = params.speaker
@@ -126,19 +130,24 @@ export default function PredicationPlayerScreen() {
     status.isLoaded,
   ])
 
-  function togglePlayback() {
-    if (!params.mediaUrl) return
+  async function togglePlayback() {
+    if (!canControl) return
 
-    if (status.playing) {
-      player.pause()
-      return
+    try {
+      setControlError(null)
+      if (status.playing) {
+        player.pause()
+        return
+      }
+      if (duration > 0 && currentTime >= duration) await player.seekTo(0)
+      player.play()
+    } catch {
+      setControlError('Impossible de démarrer la lecture. Réessayez.')
     }
-
-    player.play()
   }
 
   async function seekBy(seconds: number) {
-    if (duration <= 0) return
+    if (!canControl || duration <= 0) return
 
     const nextTime = Math.min(
       Math.max(currentTime + seconds, 0),
@@ -147,28 +156,42 @@ export default function PredicationPlayerScreen() {
 
     if (!Number.isFinite(nextTime)) return
 
-    await player.seekTo(nextTime)
+    await seekTo(nextTime)
   }
 
   async function seekFromProgressPress(event: GestureResponderEvent) {
-    if (!duration || progressTrackWidth <= 0) return
+    if (!canControl || !duration || progressTrackWidth <= 0) return
 
     const positionRatio = event.nativeEvent.locationX / progressTrackWidth
     const nextTime = Math.min(Math.max(positionRatio, 0), 1) * duration
 
     if (!Number.isFinite(nextTime)) return
 
-    await player.seekTo(nextTime)
+    await seekTo(nextTime)
+  }
+
+  async function seekTo(time: number) {
+    try {
+      await player.seekTo(time)
+      setControlError(null)
+    } catch {
+      setControlError('Impossible de déplacer la lecture. Réessayez.')
+    }
   }
 
   function updateProgressTrackWidth(event: LayoutChangeEvent) {
     setProgressTrackWidth(event.nativeEvent.layout.width)
   }
 
-  function cycleSpeed() {
-    const nextIndex = (speedIndex + 1) % speeds.length
-    setSpeedIndex(nextIndex)
-    player.setPlaybackRate(speeds[nextIndex])
+  function changeSpeed(index: number) {
+    if (!canControl) return
+    try {
+      player.setPlaybackRate(speeds[index])
+      setSpeedIndex(index)
+      setControlError(null)
+    } catch {
+      setControlError('Impossible de changer la vitesse. Réessayez.')
+    }
   }
 
   return (
@@ -178,7 +201,7 @@ export default function PredicationPlayerScreen() {
       style={styles.screen}
     >
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Retour aux prédications" onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>‹</Text>
           <Text style={styles.backLabel}>Prédications</Text>
         </Pressable>
@@ -186,7 +209,7 @@ export default function PredicationPlayerScreen() {
 
       <View style={styles.hero}>
         <View style={styles.heroTopLine}>
-          <Text style={styles.heroTag}>{serie}</Text>
+          <Text numberOfLines={1} style={styles.heroTag}>{serie}</Text>
         </View>
         <Text style={styles.heroTitle}>{title}</Text>
         {speaker || reference ? (
@@ -207,39 +230,70 @@ export default function PredicationPlayerScreen() {
       <View style={styles.playerCard}>
         <View style={styles.progressArea}>
           <Pressable
+            accessibilityRole="adjustable"
+            accessibilityLabel="Position de lecture"
+            accessibilityValue={{ min: 0, max: duration, now: Math.min(currentTime, duration), text: `${formatTime(currentTime)} sur ${formatTime(duration)}` }}
+            accessibilityActions={[{ name: 'increment', label: 'Avancer de 15 secondes' }, { name: 'decrement', label: 'Reculer de 15 secondes' }]}
+            onAccessibilityAction={(event) => {
+              if (event.nativeEvent.actionName === 'increment') void seekBy(15)
+              if (event.nativeEvent.actionName === 'decrement') void seekBy(-15)
+            }}
+            disabled={!canControl || duration <= 0}
             onLayout={updateProgressTrackWidth}
             onPress={seekFromProgressPress}
-            style={styles.progressTrack}
+            style={styles.progressTouchArea}
           >
-            <View style={[styles.progressFill, { width: progressWidth }]} />
+            <View pointerEvents="none" style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: progressWidth }]} />
+            </View>
           </Pressable>
           <View style={styles.timeLine}>
             <Text style={styles.currentTime}>
               {formatTime(currentTime)}
-            </Text>
-            <Text style={styles.episode}>
-              -{formatTime(remainingSeconds)}
             </Text>
             <Text style={styles.totalTime}>{formatTime(duration)}</Text>
           </View>
         </View>
 
         <View style={styles.controls}>
-          <Pressable onPress={cycleSpeed} style={styles.smallControl}>
-            <Text style={styles.smallControlText}>{`${speeds[speedIndex]}x`}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Reculer de 15 secondes" disabled={!canControl} onPress={() => seekBy(-15)} style={[styles.roundControl, !canControl && styles.disabledControl]}>
+            <Text style={styles.roundControlText}>↶</Text>
+            <Text style={styles.skipLabel}>15 s</Text>
           </Pressable>
-          <Pressable onPress={() => seekBy(-15)} style={styles.roundControl}>
-            <Text style={styles.roundControlText}>-15</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={status.playing ? 'Mettre en pause' : 'Lire la prédication'} accessibilityState={{ disabled: !canControl, busy: isLoading || status.isBuffering }} disabled={!canControl} onPress={togglePlayback} style={[styles.playButton, !canControl && styles.disabledControl]}>
+            {isLoading || (status.isBuffering && !status.playing) ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.playButtonText}>{status.playing ? 'Ⅱ' : '▶'}</Text>
+            )}
           </Pressable>
-          <Pressable onPress={togglePlayback} style={styles.playButton}>
-            <Text style={styles.playButtonText}>
-              {status.playing ? 'Ⅱ' : '▶'}
-            </Text>
-          </Pressable>
-          <Pressable onPress={() => seekBy(15)} style={styles.roundControl}>
-            <Text style={styles.roundControlText}>+15</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Avancer de 15 secondes" disabled={!canControl} onPress={() => seekBy(15)} style={[styles.roundControl, !canControl && styles.disabledControl]}>
+            <Text style={styles.roundControlText}>↷</Text>
+            <Text style={styles.skipLabel}>15 s</Text>
           </Pressable>
         </View>
+        <Text accessibilityLiveRegion="polite" style={styles.playbackStatus}>
+          {isLoading ? 'Chargement de l’audio…' : status.isBuffering ? 'Mise en mémoire tampon…' : duration > 0 ? `${formatTime(remainingSeconds)} restantes` : 'Lecture audio'}
+        </Text>
+        <View style={styles.speedArea}>
+          <Text style={styles.speedLabel}>Vitesse de lecture</Text>
+          <View style={styles.speedOptions}>
+            {speeds.map((speed, index) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Vitesse ${speed} fois`}
+                accessibilityState={{ selected: index === speedIndex, disabled: !canControl }}
+                disabled={!canControl}
+                key={speed}
+                onPress={() => changeSpeed(index)}
+                style={[styles.smallControl, index === speedIndex && styles.speedActive, !canControl && styles.disabledControl]}
+              >
+                <Text style={[styles.smallControlText, index === speedIndex && styles.speedTextActive]}>{speed}×</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+        {controlError ? <Text accessibilityLiveRegion="polite" style={styles.playerNotice}>{controlError}</Text> : null}
       </View>
     </ScrollView>
   )
@@ -251,8 +305,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    gap: 16,
-    padding: 20,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 520,
+    gap: 12,
+    padding: 16,
     paddingBottom: 36,
   },
   topBar: {
@@ -260,6 +317,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   backButton: {
+    minHeight: 44,
     alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
@@ -279,8 +337,8 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceContainerHigh,
     borderRadius: 8,
     borderWidth: 1,
-    gap: 10,
-    padding: 18,
+    gap: 8,
+    padding: 16,
   },
   heroTopLine: {
     alignItems: 'center',
@@ -288,15 +346,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   heroTag: {
+    flexShrink: 1,
     color: colors.onSurfaceVariant,
     fontSize: 12,
     fontWeight: '600',
   },
   heroTitle: {
     color: colors.primary,
-    fontSize: 25,
+    fontSize: 23,
     fontWeight: '700',
-    lineHeight: 33,
+    lineHeight: 30,
   },
   heroSubtitle: {
     color: colors.onSurfaceVariant,
@@ -313,11 +372,15 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceContainerHigh,
     borderRadius: 8,
     borderWidth: 1,
-    gap: 18,
-    padding: 18,
+    gap: 12,
+    padding: 16,
   },
   progressArea: {
-    gap: 8,
+    gap: 0,
+  },
+  progressTouchArea: {
+    minHeight: 44,
+    justifyContent: 'center',
   },
   progressTrack: {
     backgroundColor: colors.surfaceContainerHigh,
@@ -340,11 +403,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  episode: {
-    color: colors.outline,
-    fontSize: 11,
-    textTransform: 'uppercase',
-  },
   totalTime: {
     color: colors.onSurfaceVariant,
     fontSize: 12,
@@ -353,16 +411,19 @@ const styles = StyleSheet.create({
   controls: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 24,
   },
   smallControl: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
     borderRadius: 8,
-    height: 44,
+    minHeight: 44,
     justifyContent: 'center',
-    minWidth: 54,
-    paddingHorizontal: 10,
+    flex: 1,
+    minWidth: 44,
+    paddingHorizontal: 6,
+    paddingVertical: 8,
   },
   smallControlText: {
     color: colors.primary,
@@ -370,24 +431,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   roundControl: {
+    backgroundColor: colors.surfaceContainer,
     alignItems: 'center',
-    borderRadius: 24,
-    height: 48,
+    borderRadius: 28,
+    height: 56,
     justifyContent: 'center',
-    width: 48,
+    width: 56,
   },
   roundControlText: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: 23,
+    lineHeight: 25,
     fontWeight: '900',
   },
   playButton: {
     alignItems: 'center',
     backgroundColor: colors.primary,
-    borderRadius: 32,
-    height: 64,
+    borderRadius: 36,
+    height: 72,
     justifyContent: 'center',
-    width: 64,
+    width: 72,
   },
   playButtonText: {
     color: '#ffffff',
@@ -395,29 +458,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 32,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  actionButton: {
-    alignItems: 'center',
-    borderColor: colors.surfaceContainerHigh,
-    borderRadius: 8,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: 10,
-  },
-  actionText: {
-    color: colors.onSurfaceVariant,
-    fontSize: 13,
+  skipLabel: {
+    color: colors.primary,
+    fontSize: 11,
     fontWeight: '700',
   },
-  actionActive: {
-    color: colors.secondary,
+  playbackStatus: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    textAlign: 'center',
   },
-  actionButtonActive: {
-    borderColor: colors.secondary,
+  speedArea: {
+    borderTopColor: colors.surfaceContainerHigh,
+    borderTopWidth: 1,
+    gap: 8,
+    paddingTop: 12,
+  },
+  speedLabel: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  speedOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  speedActive: {
+    backgroundColor: colors.primary,
+  },
+  speedTextActive: {
+    color: '#ffffff',
+  },
+  disabledControl: {
+    opacity: 0.5,
   },
 })

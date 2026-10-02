@@ -437,7 +437,7 @@ export default function PredicationScreen() {
           <Text style={styles.searchIcon}>⌕</Text>
           <TextInput
             onChangeText={setSearchQuery}
-            placeholder="Thème, titre, catégorie..."
+            placeholder="Titre de la prédication"
             placeholderTextColor={colors.outline}
             style={styles.searchInput}
             value={searchQuery}

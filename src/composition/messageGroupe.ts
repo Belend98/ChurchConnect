@@ -1,4 +1,4 @@
-import { MessageGroupeService } from '@/application/MessageGroupeService'
+import { MessageGroupeService } from '@/application/services/MessageGroupeService'
 import { authService } from '@/composition/Auth'
 import { SupabaseGroupeMembreRepository } from '@/infrastructure/groupe/SupabaseGroupeMembreRepository'
 import { SupabaseGroupeRepository } from '@/infrastructure/groupe/SupabaseGroupeRepository'

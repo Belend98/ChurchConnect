@@ -5,6 +5,7 @@ import type { PredicationModel } from '@/domain/entités/Predication'
 import { getAppRoleLabel, type ProfilModel } from '@/domain/entités/Profil'
 import { useGroupes } from '@/presentation/hooks/groupe/useGroupes'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
+import { useDeleteAccount } from '@/presentation/hooks/profil/useDeleteAccount'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { router } from 'expo-router'
@@ -27,6 +28,7 @@ function getDisplayName(profile: ProfilModel | null): string {
 }
 
 export default function MonEspaceScreen() {
+  const { isDeleting, deleteError, confirmDeletion } = useDeleteAccount()
   const { data: groupes = [], isPending: isLoadingGroupes } = useGroupes()
   const { data: profile = null, email, error: profileError } = useCurrentProfile()
   const { data: predications = [], isPending: isLoadingPredications, error: predicationsError } = usePredications()
@@ -189,9 +191,21 @@ export default function MonEspaceScreen() {
         ) : null}
       </View>
 
-      <Pressable onPress={signOut} style={styles.signOutButton}>
+      <Pressable disabled={isDeleting} onPress={signOut} style={styles.signOutButton}>
         <Text style={styles.signOutButtonText}>Se déconnecter</Text>
       </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
+        disabled={isDeleting}
+        onPress={confirmDeletion}
+        style={[styles.signOutButton, isDeleting && { opacity: 0.6 }]}
+      >
+        <Text style={styles.signOutButtonText}>
+          {isDeleting ? 'Suppression en cours...' : 'Supprimer mon compte'}
+        </Text>
+      </Pressable>
+      {deleteError ? <Text style={styles.errorText}>{deleteError}</Text> : null}
     </ScrollView>
   )
 }

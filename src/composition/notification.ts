@@ -1,4 +1,4 @@
-import { NotificationService } from '@/application/NotificationService'
+import { NotificationService } from '@/application/services/NotificationService'
 import { authService } from '@/composition/Auth'
 import { SupabaseNotificationRepository } from '@/infrastructure/notification/SupabaseNotificationRepository'
 

@@ -150,20 +150,4 @@ export class SupabaseProfilRepository implements ProfilRepository {
     return mapProfil(profile as ProfilRow)
   }
 
-  async deleteAccountData(): Promise<void> {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
-
-    if (userError) throw userError
-    if (!user) return
-
-    const { error } = await supabase
-      .from('user_profil')
-      .delete()
-      .eq('id', user.id)
-
-    if (error) throw error
-  }
 }

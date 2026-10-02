@@ -30,7 +30,7 @@ function formatDuration(durationSeconds?: number): string {
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('fr-FR', {
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
   }).format(date)
 }
@@ -51,27 +51,14 @@ export function PredicationComponent({
   onToggleLike,
   predication,
 }: PredicationComponentProps) {
+  const duration = formatDuration(predication.durationSeconds)
+
   return (
     <View style={styles.card}>
-      <View style={styles.topLine}>
-        <Pressable
-          disabled={isFavoriting}
-          onPress={() => onToggleFavorite(predication)}
-          style={styles.favoriteIconButton}
-        >
-          <Text
-            style={[
-              styles.favoriteIcon,
-              isFavorite && styles.favoriteIconActive,
-            ]}
-          >
-            {isFavorite ? '★' : '☆'}
-          </Text>
-        </Pressable>
-      </View>
-
       <View style={styles.main}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Écouter ${predication.title}`}
           onPress={() => onListen(predication)}
           style={styles.thumbnailWrap}
         >
@@ -81,47 +68,59 @@ export function PredicationComponent({
         </Pressable>
 
         <View style={styles.info}>
-          <Text style={styles.title}>{predication.title}</Text>
-          {categoryName ? <Text style={styles.verse}>{categoryName}</Text> : null}
-          <Text numberOfLines={1} style={styles.date}>
-            {formatDate(predication.createdAt)}
-          </Text>
+          <Text numberOfLines={2} style={styles.title}>{predication.title}</Text>
+          {categoryName ? <Text numberOfLines={1} style={styles.verse}>{categoryName}</Text> : null}
+          <View style={styles.metadata}>
+            <Text style={styles.date}>{formatDate(predication.createdAt)}</Text>
+            {duration ? <Text style={styles.durationText}>· {duration}</Text> : null}
+          </View>
         </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          accessibilityState={{ selected: isFavorite, disabled: isFavoriting, busy: isFavoriting }}
+          disabled={isFavoriting}
+          onPress={() => onToggleFavorite(predication)}
+          style={[styles.favoriteIconButton, isFavoriting && styles.disabledButton]}
+        >
+          <Text style={[styles.favoriteIcon, isFavorite && styles.favoriteIconActive]}>
+            {isFavorite ? '★' : '☆'}
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.actions}>
-        <View style={styles.duration}>
-          <Text style={styles.durationText}>
-            {formatDuration(predication.durationSeconds)}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${isLiked ? 'Retirer mon like' : 'Aimer cette prédication'}, ${likes} likes`}
+          accessibilityState={{ selected: isLiked, disabled: isLiking, busy: isLiking }}
+          disabled={isLiking}
+          onPress={() => onToggleLike(predication)}
+          style={[styles.likeButton, isLiked && styles.likeButtonActive, isLiking && styles.disabledButton]}
+        >
+          <Text style={[styles.likes, isLiked && styles.likesActive]}>
+            {likes} ♥
           </Text>
-        </View>
+        </Pressable>
 
-        <View style={styles.actionButtons}>
-          <Pressable
-            disabled={isLiking}
-            onPress={() => onToggleLike(predication)}
-            style={[styles.likeButton, isLiked && styles.likeButtonActive]}
-          >
-            <Text style={[styles.likes, isLiked && styles.likesActive]}>
-              {likes} ♥
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => onListen(predication)}
-            style={styles.listenButton}
-          >
-            <Text style={styles.listenButtonText}>Écouter</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Écouter ${predication.title}`}
+          onPress={() => onListen(predication)}
+          style={styles.listenButton}
+        >
+          <Text style={styles.listenButtonText}>Écouter</Text>
+        </Pressable>
       </View>
 
       {canManagePredication ? (
         <View style={styles.manageActions}>
-          <Pressable onPress={() => onEdit(predication)} style={styles.editButton}>
+          <Pressable accessibilityRole="button" disabled={isDeleting} onPress={() => onEdit(predication)} style={styles.editButton}>
             <Text style={styles.editButtonText}>Modifier</Text>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
             disabled={isDeleting}
             onPress={() => onDelete(predication)}
             style={[styles.deleteButton, isDeleting && styles.disabledButton]}
@@ -142,52 +141,51 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceContainerHigh,
     borderRadius: 8,
     borderWidth: 1,
-    gap: 12,
+    gap: 8,
     overflow: 'hidden',
-    padding: 14,
-  },
-  topLine: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    padding: 12,
   },
   main: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   thumbnailWrap: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
     borderRadius: 8,
-    height: 82,
+    height: 56,
     justifyContent: 'center',
     overflow: 'hidden',
-    width: 82,
+    width: 56,
+    flexShrink: 0,
   },
   thumbnailIcon: {
     alignItems: 'center',
     backgroundColor: colors.primary,
-    borderRadius: 22,
-    height: 44,
+    borderRadius: 18,
+    height: 36,
     justifyContent: 'center',
-    width: 44,
+    width: 36,
   },
   thumbnailPlay: {
     color: '#ffffff',
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: '900',
     lineHeight: 23,
   },
   info: {
     flex: 1,
-    gap: 4,
+    minWidth: 0,
+    gap: 3,
   },
   favoriteIconButton: {
     alignItems: 'center',
-    height: 36,
+    alignSelf: 'flex-start',
+    height: 44,
     justifyContent: 'center',
-    width: 36,
+    width: 44,
+    flexShrink: 0,
   },
   favoriteIcon: {
     color: colors.onSurfaceVariant,
@@ -203,43 +201,43 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.primary,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
-    lineHeight: 25,
+    lineHeight: 21,
   },
   verse: {
     color: colors.secondary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
   },
   actions: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 8,
+    flexWrap: 'wrap',
   },
-  duration: {
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
+  metadata: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 5,
+    rowGap: 2,
   },
   durationText: {
     color: colors.onSurfaceVariant,
     fontSize: 12,
     fontWeight: '800',
   },
-  actionButtons: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
   listenButton: {
+    flex: 1,
+    minWidth: 100,
     alignItems: 'center',
     backgroundColor: colors.primary,
     borderRadius: 8,
     justifyContent: 'center',
     minHeight: 44,
-    paddingHorizontal: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   listenButtonText: {
     color: '#ffffff',
@@ -251,44 +249,52 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     flexDirection: 'row',
     gap: 8,
-    paddingTop: 12,
+    paddingTop: 8,
   },
   editButton: {
+    flex: 1,
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
     borderRadius: 8,
     justifyContent: 'center',
     minHeight: 44,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
   editButtonText: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   deleteButton: {
+    flex: 1,
     alignItems: 'center',
     borderColor: colors.error,
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: 'center',
     minHeight: 44,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
   },
   deleteButtonText: {
     color: colors.error,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   disabledButton: {
     opacity: 0.55,
   },
   likeButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 56,
     borderColor: colors.surfaceContainerHigh,
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   likeButtonActive: {
     borderColor: colors.secondary,

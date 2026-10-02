@@ -19,7 +19,6 @@ export function cacheGroupe(
   insert = false,
 ) {
   queryClient.setQueryData<GroupeModel[]>(groupeKeys.list(userId), (current) => {
-    // An event must not turn an unloaded list into a partial, fresh cache.
     if (!current) return undefined
     if (!insert && !current.some((item) => item.id === groupe.id)) return current
 

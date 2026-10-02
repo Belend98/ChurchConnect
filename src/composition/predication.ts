@@ -1,4 +1,4 @@
-import { PredicationService } from '@/application/PredicationService'
+import { PredicationService } from '@/application/services/PredicationService'
 import { authService } from '@/composition/Auth'
 import { SupabasePredicRepository } from '@/infrastructure/predication/SupabasePredicRepository'
 import { SupabasePredicationFavoriteRepository } from '@/infrastructure/predication/SupabasePredicationFavoriteRepository'

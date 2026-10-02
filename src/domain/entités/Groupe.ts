@@ -59,8 +59,11 @@ export function canManageGroupMembers(
 export function canDeleteGroup(
   groupe: Pick<GroupeModel, 'createdBy'> | null | undefined,
   userId: string | null | undefined,
+  roleApp?: string,
+  membership?: Pick<GroupeMembreModel, 'isGroupAdmin'> | null,
 ): boolean {
   return isGroupCreator(groupe, userId)
+    || Boolean(groupe && userId && roleApp === 'pasteur' && isGroupAdmin(membership))
 }
 
 export function getGroupRole(

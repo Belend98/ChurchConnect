@@ -1,4 +1,4 @@
-import { AuthService } from "@/application/AuthService"
+import { AuthService } from "@/application/services/AuthService"
 import { SupabaseAuthRepository } from "@/infrastructure/auth/SupabaseAuthRepository"
 
 const authRepository = new SupabaseAuthRepository()

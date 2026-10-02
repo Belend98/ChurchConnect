@@ -1,5 +1,7 @@
 import { mapProfil, type ProfilRow } from '@/infrastructure/profil/SupabaseProfilRepository'
 import { supabase } from '@/infrastructure/supabase/client'
+import { clearLocalAccountSession } from '@/infrastructure/auth/clearLocalAccountSession'
+import { router } from 'expo-router'
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
 import { cacheCurrentProfile, currentProfileQueryKey } from '@/presentation/queries/profilQueries'
 import { useQueryClient } from '@tanstack/react-query'
@@ -27,7 +29,9 @@ export function useCurrentProfileRealtime() {
         event: 'DELETE', schema: 'public', table: 'user_profil',
       }, (payload) => {
         if (active && payload.old.id === userId) {
-          void cacheCurrentProfile(queryClient, userId, null)
+          void clearLocalAccountSession(userId).then((cleared) => {
+            if (cleared) router.replace('/(auth)/signin')
+          }).catch((error) => console.warn('Impossible de fermer la session du compte supprimé.', error))
         }
       })
       .subscribe((status) => {

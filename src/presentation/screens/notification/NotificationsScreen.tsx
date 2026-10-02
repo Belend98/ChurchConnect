@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -56,7 +57,27 @@ export default function NotificationsScreen() {
       }
     },
   })
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => notificationService.deleteMyNotification(id),
+    onMutate: () => ({ userId }),
+    onSuccess: (_result, id, context) => {
+      if (userId && context?.userId === userId) {
+        return applyNotificationChange(queryClient, userId, { type: 'delete', id })
+      }
+    },
+  })
   const isMarkingAllAsRead = markAllMutation.isPending
+  const isBusy = markReadMutation.isPending || deleteMutation.isPending || isMarkingAllAsRead
+
+  async function deleteNotification(id: string) {
+    setError(null)
+
+    try {
+      await deleteMutation.mutateAsync(id)
+    } catch (deleteError) {
+      setError(toErrorMessage(deleteError, 'Impossible de supprimer cette notification.'))
+    }
+  }
 
   async function markAllAsRead() {
     setError(null)
@@ -110,19 +131,14 @@ export default function NotificationsScreen() {
 
         <View>
           <Text style={styles.title}>Notifications</Text>
-          <Text style={styles.subtitle}>
-            {unreadCount > 0
-              ? `${unreadCount} non lue(s)`
-              : 'Tout est à jour'}
-          </Text>
         </View>
 
         <Pressable
-          disabled={isMarkingAllAsRead || unreadCount === 0}
+          disabled={isBusy || unreadCount === 0}
           onPress={markAllAsRead}
           style={[
             styles.markAllButton,
-            (isMarkingAllAsRead || unreadCount === 0) &&
+            (isBusy || unreadCount === 0) &&
               styles.disabledButton,
           ]}
         >
@@ -147,10 +163,8 @@ export default function NotificationsScreen() {
         ) : null}
 
         {notifications.map((notification) => (
-          <Pressable
-            disabled={markReadMutation.isPending}
+          <View
             key={notification.id}
-            onPress={() => openNotification(notification)}
             style={[
               styles.notificationItem,
               !notification.isRead && styles.unreadNotificationItem,
@@ -160,16 +174,39 @@ export default function NotificationsScreen() {
               <Text style={styles.notificationType}>
                 {getTypeLabel(notification)}
               </Text>
-              <Text style={styles.notificationDate}>
-                {formatNotificationDate(notification.createdAt)}
-              </Text>
+              <View style={styles.notificationActions}>
+                <Text style={styles.notificationDate}>
+                  {formatNotificationDate(notification.createdAt)}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Supprimer la notification : ${notification.titre}`}
+                  disabled={isBusy}
+                  onPress={() => void deleteNotification(notification.id)}
+                  style={[styles.deleteButton, isBusy && styles.disabledButton]}
+                >
+                  {deleteMutation.isPending && deleteMutation.variables === notification.id ? (
+                    <ActivityIndicator size="small" color={colors.error} />
+                  ) : (
+                    <Text style={styles.deleteButtonText}>Supprimer</Text>
+                  )}
+                </Pressable>
+              </View>
             </View>
 
-            <Text style={styles.notificationTitle}>{notification.titre}</Text>
-            <Text numberOfLines={2} style={styles.notificationContent}>
-              {notification.contenu}
-            </Text>
-          </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Ouvrir la notification : ${notification.titre}`}
+              disabled={isBusy}
+              onPress={() => void openNotification(notification)}
+              style={styles.notificationBody}
+            >
+              <Text style={styles.notificationTitle}>{notification.titre}</Text>
+              <Text numberOfLines={2} style={styles.notificationContent}>
+                {notification.contenu}
+              </Text>
+            </Pressable>
+          </View>
         ))}
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -275,6 +312,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
+  },
+  notificationActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  notificationBody: {
+    gap: 7,
+  },
+  deleteButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 44,
+    paddingHorizontal: 8,
+  },
+  deleteButtonText: {
+    color: colors.error,
+    fontSize: 12,
+    fontWeight: '700',
   },
   notificationDate: {
     color: colors.onSurfaceVariant,

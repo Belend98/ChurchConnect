@@ -1,8 +1,8 @@
-import type { AuthService } from '@/application/AuthService'
+import type { AuthService } from '@/application/services/AuthService'
 import { canManageGroup } from '@/domain/entités/Groupe'
 import type {
-  MessageGroupeModel,
-  UnsubscribeMessageGroupe,
+    MessageGroupeModel,
+    UnsubscribeMessageGroupe,
 } from '@/domain/entités/MessageGroupe'
 import type { GroupeMembreRepository } from '@/domain/repositories/GroupeMembreRepository'
 import type { GroupeRepository } from '@/domain/repositories/GroupeRepository'

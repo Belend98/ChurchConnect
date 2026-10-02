@@ -1,14 +1,14 @@
-import type { AuthService } from '@/application/AuthService'
-import { canManageGroup } from '@/domain/entités/Groupe'
+import type { AuthService } from '@/application/services/AuthService'
 import type {
-  CreateGroupeModel,
-  GroupeModel,
-  UpdateGroupeModel,
+    CreateGroupeModel,
+    GroupeModel,
+    UpdateGroupeModel,
 } from '@/domain/entités/Groupe'
+import { canDeleteGroup, canManageGroup } from '@/domain/entités/Groupe'
 import type {
-  CreateGroupeMembreModel,
-  GroupeMembreModel,
-  UpdateGroupeMembreModel,
+    CreateGroupeMembreModel,
+    GroupeMembreModel,
+    UpdateGroupeMembreModel,
 } from '@/domain/entités/GroupeMember'
 import type { GroupeMembreRepository } from '@/domain/repositories/GroupeMembreRepository'
 import type { GroupeRepository } from '@/domain/repositories/GroupeRepository'
@@ -27,12 +27,6 @@ export class GroupeService {
     const groupe = await this.groupeRepository.create({
       ...data,
       createdBy: userId,
-    })
-
-    await this.groupeMembreRepository.create({
-      groupeId: groupe.id,
-      userId,
-      isGroupAdmin: true,
     })
 
     return groupe
@@ -66,9 +60,7 @@ export class GroupeService {
   }
 
   async deleteGroupe(id: string): Promise<void> {
-    await this.ensureCurrentUserIsGroupCreator(id)
-
-    await this.groupeMembreRepository.deleteByGroupe(id)
+    await this.ensureCurrentUserCanDeleteGroup(id)
     await this.groupeRepository.delete(id)
   }
 
@@ -184,13 +176,16 @@ export class GroupeService {
     }
   }
 
-  private async ensureCurrentUserIsGroupCreator(groupeId: string): Promise<void> {
+  private async ensureCurrentUserCanDeleteGroup(groupeId: string): Promise<void> {
     const userId = await this.authService.getCurrentUserIdOrThrow()
     const groupe = await this.groupeRepository.getById(groupeId)
+    const profile = await this.profilRepository.getProfile(userId)
+    const memberships = await this.groupeMembreRepository.listByUser(userId)
+    const membership = memberships.find((item) => item.groupeId === groupeId)
 
     if (!groupe) throw new Error('Groupe introuvable.')
-    if (groupe.createdBy !== userId) {
-      throw new Error('Seul le créateur du groupe peut le supprimer.')
+    if (!canDeleteGroup(groupe, userId, profile?.roleApp, membership)) {
+      throw new Error('Seuls le créateur et les pasteurs administrateurs du groupe peuvent le supprimer.')
     }
   }
 }

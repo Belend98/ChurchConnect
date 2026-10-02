@@ -1,9 +1,9 @@
-import type { AuthService } from '@/application/AuthService'
-import { canManagePredications } from '@/domain/entités/Profil'
+import type { AuthService } from '@/application/services/AuthService'
 import type {
   AnnonceModel,
   CreateAnnonceModel,
 } from '@/domain/entités/Annonce'
+import { canManagePredications } from '@/domain/entités/Profil'
 import type { AnnonceRepository } from '@/domain/repositories/AnnonceRepository'
 import type { ProfilRepository } from '@/domain/repositories/ProfilRepository'
 

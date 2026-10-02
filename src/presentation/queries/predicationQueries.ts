@@ -12,7 +12,6 @@ export function cachePredicationFavorite(
   isFavorite: boolean,
 ) {
   queryClient.setQueryData<string[]>(queryKey, (current) => {
-    // Do not turn an unloaded list into a partial, fresh cache.
     if (!current) return undefined
     const withoutFavorite = current.filter((id) => id !== predicationId)
     return isFavorite ? [...withoutFavorite, predicationId] : withoutFavorite

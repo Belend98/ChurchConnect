@@ -99,7 +99,6 @@ export class SupabasePredicationAudioStorage
           const response = JSON.parse(request.responseText)
           if (typeof response.message === 'string') message = response.message
         } catch {
-          // Keep the fallback message when the server response is not JSON.
         }
         reject(new Error(message))
       }

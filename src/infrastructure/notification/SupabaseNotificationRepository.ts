@@ -85,6 +85,16 @@ export class SupabaseNotificationRepository
     return data ? mapNotification(data as NotificationRow) : null
   }
 
+  async deleteById(id: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('notification')
+      .delete()
+      .eq('notification_id', id)
+      .eq('user_id', userId)
+
+    if (error) throw error
+  }
+
   subscribeToUserNotifications(
     userId: string,
     onNotification: (notification: NotificationModel) => void,

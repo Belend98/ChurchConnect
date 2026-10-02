@@ -1,3 +1,5 @@
+begin;
+
 create extension if not exists pgcrypto with schema extensions;
 
 create table if not exists public.user_profil (
@@ -136,3 +138,103 @@ create table if not exists public.notification (
     foreign key (user_id)
     references public.user_profil(id)
 );
+
+alter table public.predication_favorites
+  drop constraint predication_favorites_user_id_fkey,
+  add constraint predication_favorites_user_id_fkey
+    foreign key (user_id)
+    references public.user_profil(id)
+    on delete cascade;
+
+alter table public.predication_likes
+  drop constraint predication_likes_user_id_fkey,
+  add constraint predication_likes_user_id_fkey
+    foreign key (user_id)
+    references public.user_profil(id)
+    on delete cascade;
+
+alter table public.groupe_membre
+  drop constraint groupe_membre_user_id_fkey,
+  add constraint groupe_membre_user_id_fkey
+    foreign key (user_id)
+    references public.user_profil(id)
+    on delete cascade;
+
+alter table public.notification
+  drop constraint notification_user_id_fkey,
+  add constraint notification_user_id_fkey
+    foreign key (user_id)
+    references public.user_profil(id)
+    on delete cascade;
+
+alter table public.message_groupe
+  alter column user_id drop not null,
+  drop constraint message_groupe_user_id_fkey,
+  add constraint message_groupe_user_id_fkey
+    foreign key (user_id)
+    references public.user_profil(id)
+    on delete set null;
+
+alter table public.groupe
+  drop constraint groupe_created_by_fkey,
+  add constraint groupe_created_by_fkey
+    foreign key (created_by)
+    references public.user_profil(id)
+    on delete set null;
+
+alter table public.annonce
+  drop constraint annonce_created_by_fkey,
+  add constraint annonce_created_by_fkey
+    foreign key (created_by)
+    references public.user_profil(id)
+    on delete set null;
+
+alter table public.user_profil
+  drop constraint if exists user_profil_auth_user_fkey,
+  add constraint user_profil_auth_user_fkey
+    foreign key (id)
+    references auth.users(id)
+    on delete cascade;
+
+alter table public.groupe_membre
+  drop constraint groupe_membre_groupe_id_fkey,
+  add constraint groupe_membre_groupe_id_fkey
+    foreign key (groupe_id)
+    references public.groupe(groupe_id)
+    on delete cascade;
+
+alter table public.message_groupe
+  drop constraint message_groupe_groupe_id_fkey,
+  add constraint message_groupe_groupe_id_fkey
+    foreign key (groupe_id)
+    references public.groupe(groupe_id)
+    on delete cascade;
+
+alter table public.predication_favorites
+  drop constraint favori_predication_id_fkey,
+  add constraint favori_predication_id_fkey
+    foreign key (predication_id)
+    references public.predication(predication_id)
+    on delete cascade;
+
+alter table public.predication_likes
+  drop constraint like_predication_id_fkey,
+  add constraint like_predication_id_fkey
+    foreign key (predication_id)
+    references public.predication(predication_id)
+    on delete cascade;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'user_profil'
+  ) then
+    alter publication supabase_realtime add table public.user_profil;
+  end if;
+end;
+$$;
+
+commit;

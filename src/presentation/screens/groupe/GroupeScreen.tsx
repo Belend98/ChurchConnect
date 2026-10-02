@@ -39,7 +39,8 @@ export default function GroupeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.groupList}>
+        {groups.length > 0 ? (
+          <View style={styles.groupList}>
           {groups.map((group) => (
             <Pressable
               key={group.id}
@@ -73,7 +74,8 @@ export default function GroupeScreen() {
               <Text style={styles.groupArrow}>›</Text>
             </Pressable>
           ))}
-        </View>
+          </View>
+        ) : null}
 
         {isPending ? <ActivityIndicator color={colors.primary} /> : null}
 
@@ -97,6 +99,7 @@ export default function GroupeScreen() {
             </Text>
           </View>
         ) : null}
+
       </ScrollView>
     </View>
   )

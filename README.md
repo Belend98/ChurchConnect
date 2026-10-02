@@ -78,45 +78,98 @@ Remplacer uniquement les placeholders Supabase :
 Les noms de buckets doivent rester identiques, car ils sont utilisés par le code
 et par les policies Storage.
 
-### 5. Migrer la structure des tables
+### 5. Initialiser la base de données
 
-Les migrations SQL se trouvent dans :
+Le SQL du dépôt est regroupé dans trois fichiers à exécuter dans cet ordre,
+depuis le SQL Editor Supabase :
 
-```text
-supabase/migrations
+| Ordre | Fichier dans `supabase/migrations` | Contenu |
+| --- | --- | --- |
+| 1 | `20260904090000_create_core_tables.sql` | Création des dix tables, clés étrangères, suppressions `CASCADE` / `SET NULL` et publication realtime du profil. |
+| 2 | `20260915100000_transactions.sql` | Fonctions et RPC, changement des rôles, trigger de protection des profils, révocation des sessions et détachement de la propriété Storage. |
+| 3 | `20260916100000_policies_by_table.sql` | Activation RLS et policies des tables et du Storage, dont le contrôle des sessions actives. |
+
+Chaque fichier est encadré par `BEGIN` / `COMMIT` : une erreur annule les
+changements du fichier concerné. Les fonctions sont créées avant les policies
+qui les utilisent.
+
+Ces fichiers consolident les anciennes migrations. La base existante possède
+déjà les corrections ; cette réorganisation ne nécessite pas de les réappliquer.
+Sur un projet déjà migré, ne pas lancer directement `supabase db push` avec ces
+fichiers sans avoir aligné l’historique des migrations Supabase.
+
+### 6. Règles RLS et permissions
+
+Le fichier des tables intègre les cascades : supprimer un groupe retire ses
+membres et messages ; supprimer une prédication retire ses favoris et likes.
+Le test `tests/deletion-cascades.sql` vérifie ces suppressions et la conservation
+des autres données dans une transaction annulée.
+
+La fonction `can_delete_group`, définie dans le fichier des transactions et
+utilisée par la policy RLS, autorise la suppression d’un groupe par son créateur
+ou par un pasteur qui est aussi administrateur du groupe, avec une session active.
+Un administrateur de l’application ou du groupe ne dispose pas de ce droit à lui
+seul. Les tests `tests/group-deletion-permissions.sql` et
+`tests/group-deletion.test.cjs` vérifient ces permissions et le refus d’un succès
+apparent sans ligne supprimée.
+
+### Suppression des comptes
+
+Le pasteur peut supprimer un compte depuis le rouage de la liste des membres,
+avec une confirmation. Les administrateurs gardent uniquement la gestion des
+rôles. Chaque utilisateur peut également supprimer son propre compte dans
+« Mon espace ».
+
+L’Edge Function `delete-account` vérifie la session et le rôle en base, supprime
+les connexions du compte ciblé (blocage des nouvelles connexions et révocation
+de toutes ses sessions), supprime les photos du dossier `profiles/<userId>`,
+puis supprime le compte Auth. Les
+cascades retirent le profil et ses données personnelles liées ; les messages,
+groupes, annonces et prédications sont conservés pour la communauté.
+
+Le fichier `20260915100000_transactions.sql` ajoute
+une fonction réservée à `service_role` pour détacher la propriété des médias
+partagés avant la suppression Auth.
+
+Les fonctions de révocation sont dans le fichier des transactions. Les règles
+du fichier `20260916100000_policies_by_table.sql` exigent une session encore active sur les tables de l’application
+et les opérations Storage authentifiées : un ancien JWT ne suffit plus après
+révocation. Le realtime déconnecte l’appareil lors de la suppression du profil.
+Une vérification au démarrage, au retour dans l’application, à la reconnexion
+réseau sur le web et toutes les 30 secondes couvre un événement realtime manqué.
+Les écrans privés sont également protégés contre un accès sans session locale.
+
+Si le nettoyage échoue après la révocation, le compte reste bloqué ; le pasteur
+peut relancer sa suppression. Les médias publiés dans les buckets publics restent
+publics, conformément à la configuration existante.
+
+Déployer ensuite l’Edge Function :
+
+```bash
+npx supabase functions deploy delete-account --use-api
 ```
 
-Commencer par exécuter la migration de création des tables :
+Si le bucket d’images est personnalisé, définir le secret serveur
+`SUPABASE_IMAGE_BUCKET` avec le même nom que
+`EXPO_PUBLIC_SUPABASE_IMAGE_BUCKET` (par défaut `church-images`). La clé
+`SUPABASE_SERVICE_ROLE_KEY` reste exclusivement côté serveur.
 
-```text
-supabase/migrations/20260904090000_create_core_tables.sql
+Tests de permissions, de nettoyage Storage et de session locale :
+
+```bash
+node --test tests/delete-account.test.cjs tests/account-session.test.cjs
 ```
 
-Cette migration crée les tables principales :
+Le test SQL `tests/account-session-rls.sql` vérifie une session active puis
+révoquée avec les mêmes claims JWT. Ses données fictives sont annulées par
+`ROLLBACK`.
 
-- `user_profil` ;
-- `categorie_predication` ;
-- `predication` ;
-- `predication_favorites` ;
-- `predication_likes` ;
-- `groupe` ;
-- `groupe_membre` ;
-- `annonce` ;
-- `message_groupe` ;
-- `notification`.
-
-Elle peut être exécutée depuis le SQL Editor Supabase.
-
-### 6. Migrer les règles RLS et les policies
-
-Après la création des tables, exécuter la migration des policies :
-
-```text
-supabase/migrations/20260916100000_policies_by_table.sql
-```
-
-Cette migration active Row Level Security et crée les policies par table.
-Elle contient aussi les fonctions SQL utilisées par les règles d'accès.
+La RPC `change_user_role` vérifie également la session active avant toute
+modification, car son exécution `SECURITY DEFINER` contourne les règles RLS.
+Le test `tests/change-user-role-session.sql` vérifie qu’un admin et un pasteur
+peuvent changer les rôles avec une session active, puis sont refusés avec les
+mêmes claims JWT après révocation, sans modifier les rôles cibles. Toutes ses
+données fictives sont annulées par `ROLLBACK`.
 
 ### 7. Créer les buckets Storage
 
@@ -128,8 +181,8 @@ predications-audio
 ```
 
 Si les buckets n'existent pas encore, les créer en public depuis l'interface
-Supabase Storage, ou exécuter les migrations du dossier `supabase/migrations`
-qui créent les buckets.
+Supabase Storage. Les fichiers SQL configurent les permissions Storage ; les
+buckets doivent être créés séparément.
 
 ### 8. Installer les dépendances
 

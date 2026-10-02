@@ -1,0 +1,4 @@
+project_id = "churchconnect"
+
+[functions.delete-account]
+verify_jwt = true

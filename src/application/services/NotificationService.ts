@@ -1,4 +1,4 @@
-import type { AuthService } from '@/application/AuthService'
+import type { AuthService } from '@/application/services/AuthService'
 import type {
   NotificationModel,
   UnsubscribeNotification,
@@ -33,6 +33,12 @@ export class NotificationService {
     const userId = await this.authService.getCurrentUserIdOrThrow()
 
     return this.notificationRepository.markAsRead(id, userId)
+  }
+
+  async deleteMyNotification(id: string): Promise<void> {
+    const userId = await this.authService.getCurrentUserIdOrThrow()
+
+    await this.notificationRepository.deleteById(id, userId)
   }
 
   async subscribeToMyNotifications(

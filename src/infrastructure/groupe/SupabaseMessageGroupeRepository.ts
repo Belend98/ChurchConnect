@@ -9,7 +9,7 @@ import { supabase } from '@/infrastructure/supabase/client'
 type MessageGroupeRow = {
   message_id: string
   groupe_id: string
-  user_id: string
+  user_id: string | null
   contenu: string
   created_at: string
   updated_at: string | null

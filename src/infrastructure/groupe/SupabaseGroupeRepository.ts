@@ -100,11 +100,16 @@ export class SupabaseGroupeRepository implements GroupeRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('groupe')
       .delete()
       .eq('groupe_id', id)
+      .select('groupe_id')
+      .maybeSingle()
 
     if (error) throw error
+    if (!data) {
+      throw new Error('Aucun groupe supprimé.')
+    }
   }
 }

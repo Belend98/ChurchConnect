@@ -25,7 +25,6 @@ export async function applyNotificationChange(
     if (!current) return undefined
     if (change.type === 'delete') return current.filter((item) => item.id !== change.id)
     if (change.type === 'read') {
-      // Only rows actually updated by the server are marked read, not new arrivals.
       const ids = new Set(change.notifications.filter((item) => item.userId === userId).map((item) => item.id))
       return current.map((item) => ids.has(item.id) ? { ...item, isRead: true } : item)
     }

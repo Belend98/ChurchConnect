@@ -1,5 +1,5 @@
 import { annonceService } from '@/composition/annonce'
-import { profilService } from '@/composition/profil'
+import { MemberRoleButton } from '@/presentation/component/MemberRoleButton'
 import {
   canManagePredications,
   getAppRoleLabel,
@@ -8,6 +8,7 @@ import {
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
 import { useNotifications } from '@/presentation/hooks/notification/useNotifications'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
+import { useCommunityMembers } from '@/presentation/hooks/profil/useCommunityMembers'
 import { annoncesQueryKey } from '@/presentation/queries/annonceQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
@@ -22,6 +23,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native'
 
@@ -30,6 +32,18 @@ function getMemberDisplayName(member: ProfilModel) {
 
   return fullName || member.username || 'Membre'
 }
+
+function normalizeMemberSearch(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr-FR')
+}
+
+const memberRoleFilters = [
+  { value: 'all', label: 'Tous' },
+  { value: 'admin', label: 'Admins' },
+  { value: 'membre', label: 'Membres' },
+] as const
+
+type MemberRoleFilter = (typeof memberRoleFilters)[number]['value']
 
 export default function HomeScreen() {
   const userId = useCurrentUserId()
@@ -47,37 +61,36 @@ export default function HomeScreen() {
     gcTime: Infinity,
   })
   const [currentAnnonceIndex, setCurrentAnnonceIndex] = useState(0)
-  const { data: profile, isError: isProfileError } = useCurrentProfile()
+  const { data: profile, isError: isProfileError, refetch: refetchProfile } = useCurrentProfile()
   const canCreateAnnonce = !isProfileError && canManagePredications(profile?.roleApp)
-  const profileName = profile?.prenom ?? profile?.username ?? null
+  const canFilterMembers = !isProfileError && (profile?.roleApp === 'pasteur' || profile?.roleApp === 'admin')
   const { unreadCount: notificationUnreadCount } = useNotifications()
-  const [communityMembers, setCommunityMembers] = useState<ProfilModel[]>([])
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true)
+  const {
+    data: communityMembers = [],
+    isPending: isLoadingMembers,
+    error: membersError,
+    refetch: refetchMembers,
+  } = useCommunityMembers()
+  const [memberSearch, setMemberSearch] = useState('')
+  const [memberRoleFilter, setMemberRoleFilter] = useState<MemberRoleFilter>('all')
+
+  const searchTerms = normalizeMemberSearch(memberSearch).trim().split(/\s+/).filter(Boolean)
+  const visibleMembers = canFilterMembers
+    ? communityMembers.filter((member) => {
+        if (memberRoleFilter !== 'all' && member.roleApp !== memberRoleFilter) return false
+        const searchableName = normalizeMemberSearch(
+          [member.prenom, member.nom, member.username].filter(Boolean).join(' '),
+        )
+        return searchTerms.every((term) => searchableName.includes(term.replace(/^@/, '')))
+      })
+    : communityMembers
 
   useFocusEffect(
     useCallback(() => {
-      let isMounted = true
-      setIsLoadingMembers(true)
-
-      profilService
-        .listCommunityMembers()
-        .then((members) => {
-          if (!isMounted) return
-          setCommunityMembers(members)
-        })
-        .catch((error) => {
-          if (!isMounted) return
-          console.warn(error)
-          setCommunityMembers([])
-        })
-        .finally(() => {
-          if (isMounted) setIsLoadingMembers(false)
-        })
-
-      return () => {
-        isMounted = false
-      }
-    }, []),
+      if (!userId) return
+      void refetchProfile()
+      void refetchMembers()
+    }, [userId, refetchProfile, refetchMembers]),
   )
 
   const visibleAnnonceIndex = Math.min(currentAnnonceIndex, Math.max(annonces.length - 1, 0))
@@ -95,6 +108,8 @@ export default function HomeScreen() {
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.appBar}>
@@ -218,13 +233,67 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.membersCard}>
-          {!isLoadingMembers && communityMembers.length === 0 ? (
+          {canFilterMembers ? (
+            <View style={styles.memberFilters}>
+              <View style={styles.memberSearchBox}>
+                <TextInput
+                  accessibilityLabel="Rechercher un membre par nom ou nom d’utilisateur"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  onChangeText={setMemberSearch}
+                  placeholder="Nom ou @pseudo"
+                  placeholderTextColor={colors.onSurfaceVariant}
+                  returnKeyType="search"
+                  style={styles.memberSearchInput}
+                  value={memberSearch}
+                />
+                {memberSearch ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Effacer la recherche"
+                    onPress={() => setMemberSearch('')}
+                    style={styles.clearMemberSearch}
+                  >
+                    <Text style={styles.clearMemberSearchText}>×</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              <View style={styles.memberRoleFilters}>
+                {memberRoleFilters.map((filter) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: memberRoleFilter === filter.value }}
+                    key={filter.value}
+                    onPress={() => setMemberRoleFilter(filter.value)}
+                    style={[styles.memberFilterButton, memberRoleFilter === filter.value && styles.memberFilterActive]}
+                  >
+                    <Text style={[styles.memberFilterText, memberRoleFilter === filter.value && styles.memberFilterTextActive]}>
+                      {filter.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {isLoadingMembers ? <ActivityIndicator color={colors.primary} /> : null}
+
+          {membersError ? (
+            <View>
+              <Text style={styles.membersError}>{toErrorMessage(membersError, 'Impossible de charger les membres.')}</Text>
+              <Pressable accessibilityRole="button" onPress={() => void refetchMembers()} style={styles.memberFilterButton}>
+                <Text style={styles.memberFilterText}>Réessayer</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {!isLoadingMembers && !membersError && visibleMembers.length === 0 ? (
             <Text style={styles.sermonSubtitle}>
-              Aucun membre trouvé pour le moment.
+              {communityMembers.length === 0 ? 'Aucun membre trouvé pour le moment.' : 'Aucun membre ne correspond à votre recherche.'}
             </Text>
           ) : null}
 
-          {communityMembers.map((member) => {
+          {visibleMembers.map((member) => {
             const memberName = getMemberDisplayName(member)
 
             return (
@@ -249,6 +318,12 @@ export default function HomeScreen() {
                     @{member.username ?? 'profil'} · {getAppRoleLabel(member.roleApp)}
                   </Text>
                 </View>
+                {canFilterMembers ? (
+                  <MemberRoleButton
+                    member={member}
+                    memberName={memberName}
+                  />
+                ) : null}
               </View>
             )
           })}
@@ -516,6 +591,73 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 54,
   },
+  membersError: {
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 8,
+  },
+  memberFilters: {
+    gap: 8,
+    borderBottomColor: colors.surfaceContainerHigh,
+    borderBottomWidth: 1,
+    paddingBottom: 12,
+  },
+  memberSearchBox: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceContainer,
+    borderColor: colors.outline,
+    borderWidth: 1,
+    borderRadius: 8,
+    minHeight: 44,
+  },
+  memberSearchInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.onSurface,
+    fontSize: 14,
+  },
+  clearMemberSearch: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    width: 44,
+  },
+  clearMemberSearchText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 24,
+  },
+  memberRoleFilters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  memberFilterButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 64,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceContainer,
+  },
+  memberFilterActive: {
+    backgroundColor: colors.primary,
+  },
+  memberFilterText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  memberFilterTextActive: {
+    color: '#ffffff',
+  },
   memberAvatar: {
     alignItems: 'center',
     backgroundColor: colors.primary,
@@ -537,6 +679,7 @@ const styles = StyleSheet.create({
   },
   memberInfo: {
     flex: 1,
+    minWidth: 0,
     gap: 3,
   },
   memberName: {

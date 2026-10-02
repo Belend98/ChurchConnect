@@ -38,7 +38,8 @@ function getParam(value: string | string[] | undefined): string {
   return value ?? ''
 }
 
-function getProfileName(profile: ProfilModel | undefined, userId: string) {
+function getProfileName(profile: ProfilModel | undefined, userId: string | null) {
+  if (userId === null) return 'Utilisateur supprimé'
   if (!profile) return `Membre ${userId.slice(0, 6)}`
 
   const fullName = [profile.prenom, profile.nom].filter(Boolean).join(' ')
@@ -387,7 +388,11 @@ export default function GroupeDetailScreen() {
     currentMembership,
     currentUserId,
   )
-  const canDeleteCurrentGroup = canDeleteGroupByRole(groupe, currentUserId)
+  const canDeleteCurrentGroup = canDeleteGroupByRole(
+    groupe, currentUserId,
+    currentUserId ? memberProfiles[currentUserId]?.roleApp : undefined,
+    currentMembership,
+  )
 
   return (
     <View style={styles.screen}>
@@ -456,8 +461,8 @@ export default function GroupeDetailScreen() {
         ) : null}
 
         {(groupe ? messages : []).map((message) => {
-          const isOwnMessage = message.userId === currentUserId
-          const profile = memberProfiles[message.userId]
+          const isOwnMessage = message.userId !== null && message.userId === currentUserId
+          const profile = message.userId === null ? undefined : memberProfiles[message.userId]
 
           return (
             <View

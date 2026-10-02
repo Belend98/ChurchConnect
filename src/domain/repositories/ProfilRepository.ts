@@ -7,5 +7,4 @@ export interface ProfilRepository {
   listCommunityMembers(limit?: number): Promise<ProfilModel[]>
   listByIds(ids: string[]): Promise<ProfilModel[]>
   updateProfile(userId: string, data: CreateProfilModel): Promise<ProfilModel>
-  deleteAccountData(userId: string): Promise<void>
 }
