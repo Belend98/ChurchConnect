@@ -24,7 +24,11 @@ export function MemberRoleButton({ member, memberName }: Props) {
   const { data: actor, userId, isError } = useCurrentProfile()
   const canManage = !isError && (actor?.roleApp === 'admin' || actor?.roleApp === 'pasteur')
   const canChangeRole = canManage && member.roleApp !== 'pasteur'
-  const canDelete = !isError && actor?.roleApp === 'pasteur'
+  const isPastorAccount = member.roleApp === 'pasteur'
+  const canDelete = canManage && !isPastorAccount && (
+    actor?.roleApp === 'pasteur' || member.roleApp === 'membre'
+  )
+  const canInspectPastorAccount = !isError && actor?.roleApp === 'pasteur' && isPastorAccount
   const mutation = useMutation({
     mutationFn: (role: ManagedAppRole) => changeUserRoleUseCase.execute(member.id, role),
     onMutate: () => ({ userId }),
@@ -55,7 +59,7 @@ export function MemberRoleButton({ member, memberName }: Props) {
   })
   const isBusy = mutation.isPending || deletion.isPending
 
-  if (!canChangeRole && !canDelete) return null
+  if (!canChangeRole && !canDelete && !canInspectPastorAccount) return null
 
   function openRolePicker() {
     mutation.reset()
@@ -82,7 +86,7 @@ export function MemberRoleButton({ member, memberName }: Props) {
           size={18}
           tintColor={colors.primary}
         />
-        <Text style={styles.settingsLabel}>{canDelete ? 'Gérer' : 'Rôle'}</Text>
+        <Text style={styles.settingsLabel}>{canDelete || canInspectPastorAccount ? 'Gérer' : 'Rôle'}</Text>
       </Pressable>
       <Modal
         animationType="fade"
@@ -92,9 +96,12 @@ export function MemberRoleButton({ member, memberName }: Props) {
       >
         <View style={styles.overlay}>
           <View accessibilityViewIsModal style={styles.dialog}>
-            <Text accessibilityRole="header" style={styles.title}>{isConfirmingDeletion ? 'Supprimer le compte' : canDelete ? 'Gérer le compte' : 'Attribuer un rôle'}</Text>
+            <Text accessibilityRole="header" style={styles.title}>{isConfirmingDeletion ? 'Supprimer le compte' : canDelete || canInspectPastorAccount ? 'Gérer le compte' : 'Attribuer un rôle'}</Text>
             <Text style={styles.memberName}>{memberName}</Text>
             <Text style={styles.currentRole}>Rôle actuel : {getAppRoleLabel(member.roleApp)}</Text>
+            {canInspectPastorAccount ? (
+              <Text accessibilityRole="alert" style={styles.error}>Le compte pasteur ne peut pas être supprimé.</Text>
+            ) : null}
             {isConfirmingDeletion ? (
               <Text style={styles.currentRole}>Voulez-vous supprimer définitivement le compte de {memberName} ? Cette action est irréversible.{member.id === userId ? ' Vous serez déconnecté.' : ''}</Text>
             ) : canChangeRole ? <View style={styles.roleOptions}>

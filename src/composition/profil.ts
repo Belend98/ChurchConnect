@@ -1,11 +1,11 @@
-import { ChangeUserRoleUseCase } from '@/application/services/ChangeUserRoleUseCase'
-import { DeleteAccountUseCase } from '@/application/services/DeleteAccountUseCase'
 import { ProfilService } from '@/application/services/ProfilService'
+import { ChangeUserRoleUseCase } from '@/application/use cases/ChangeUserRoleUseCase'
+import { DeleteAccountUseCase } from '@/application/use cases/DeleteAccountUseCase'
+import { clearLocalAccountSession } from '@/infrastructure/auth/clearLocalAccountSession'
 import { SupabaseAuthAdminGateway } from '@/infrastructure/auth/SupabaseAuthAdminGateway'
 import { SupabaseProfilRepository } from '@/infrastructure/profil/SupabaseProfilRepository'
 import { SupabaseRoleAdminGateway } from '@/infrastructure/profil/SupabaseRoleAdminGateway'
 import { SupabaseImageStorage } from '@/infrastructure/storage/SupabaseImageStorage'
-import { clearLocalAccountSession } from '@/infrastructure/auth/clearLocalAccountSession'
 import { authService } from './Auth'
 
 const profilRepository = new SupabaseProfilRepository()

@@ -1,5 +1,5 @@
 import type { AuthService } from '@/application/services/AuthService'
-import type { DeleteAccountUseCase } from '@/application/services/DeleteAccountUseCase'
+import type { DeleteAccountUseCase } from '@/application/use cases/DeleteAccountUseCase'
 import type { CreateProfilModel } from '@/domain/entités/Profil'
 import type {
     ImageStorage,

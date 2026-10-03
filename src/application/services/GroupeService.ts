@@ -126,6 +126,7 @@ export class GroupeService {
     if (!membership) throw new Error('Membre introuvable.')
 
     await this.ensureCurrentUserCanManageGroup(membership.groupeId)
+    await this.ensureMemberCanBeManaged(membership.groupeId, membership.userId)
 
     return this.groupeMembreRepository.update(id, data)
   }
@@ -140,6 +141,7 @@ export class GroupeService {
     if (currentUserId !== membership.userId) {
       await this.ensureCurrentUserCanManageGroup(membership.groupeId)
     }
+    await this.ensureMemberCanBeManaged(membership.groupeId, membership.userId)
 
     return this.groupeMembreRepository.delete(id)
   }
@@ -150,8 +152,20 @@ export class GroupeService {
     if (currentUserId !== userId) {
       await this.ensureCurrentUserCanManageGroup(groupeId)
     }
+    await this.ensureMemberCanBeManaged(groupeId, userId)
 
     return this.groupeMembreRepository.deleteByGroupeAndUser(groupeId, userId)
+  }
+
+  private async ensureMemberCanBeManaged(groupeId: string, userId: string): Promise<void> {
+    const profile = await this.profilRepository.getProfile(userId)
+    if (profile?.roleApp === 'pasteur') {
+      throw new Error('Le pasteur reste administrateur du groupe et ne peut pas en être retiré.')
+    }
+    const groupe = await this.groupeRepository.getById(groupeId)
+    if (groupe?.createdBy === userId) {
+      throw new Error('Le créateur conserve la gestion du groupe et ne peut pas en être retiré.')
+    }
   }
 
   private async ensureCurrentUserIsGroupMember(groupeId: string): Promise<void> {

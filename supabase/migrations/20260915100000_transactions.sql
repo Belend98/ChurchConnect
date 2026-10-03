@@ -280,4 +280,118 @@ revoke all on function public.can_delete_group(uuid)
 grant execute on function public.can_delete_group(uuid)
   to authenticated, service_role;
 
+create or replace function public.protect_group_membership()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_role text;
+  creator_id uuid;
+begin
+  if tg_op = 'DELETE' then
+    select created_by into creator_id from public.groupe where groupe_id = old.groupe_id;
+    if not found then return old; end if;
+    select role_app into target_role from public.user_profil where id = old.user_id;
+    if target_role = 'pasteur' then
+      raise exception 'Le pasteur ne peut pas être retiré du groupe.' using errcode = '42501';
+    end if;
+    if target_role is not null and creator_id = old.user_id then
+      raise exception 'Le créateur ne peut pas être retiré du groupe.' using errcode = '42501';
+    end if;
+    return old;
+  end if;
+
+  if tg_op = 'UPDATE' and (
+    new.gmembre_id is distinct from old.gmembre_id
+    or new.groupe_id is distinct from old.groupe_id
+    or new.user_id is distinct from old.user_id
+  ) then
+    raise exception 'L’identité et le groupe d’un membre ne peuvent pas être modifiés.' using errcode = '42501';
+  end if;
+  select role_app into target_role from public.user_profil where id = new.user_id;
+  select created_by into creator_id from public.groupe where groupe_id = new.groupe_id;
+  if target_role = 'pasteur' or creator_id = new.user_id then
+    if tg_op = 'UPDATE' and new.is_group_admin is distinct from true then
+      raise exception 'Le pasteur et le créateur conservent les droits administrateur du groupe.' using errcode = '42501';
+    end if;
+    new.is_group_admin := true;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.protect_group_membership() from public, anon, authenticated;
+drop trigger if exists protect_group_membership on public.groupe_membre;
+create trigger protect_group_membership
+before insert or update or delete on public.groupe_membre
+for each row execute function public.protect_group_membership();
+
+create or replace function public.add_group_administrators()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.groupe_membre (groupe_id, user_id, is_group_admin)
+  select new.groupe_id, p.id, true
+  from public.user_profil p
+  where (p.id = new.created_by or p.role_app = 'pasteur')
+    and not exists (
+      select 1 from public.groupe_membre m
+      where m.groupe_id = new.groupe_id and m.user_id = p.id
+    );
+  return new;
+end;
+$$;
+
+revoke all on function public.add_group_administrators() from public, anon, authenticated;
+drop trigger if exists add_group_administrators on public.groupe;
+create trigger add_group_administrators
+after insert on public.groupe
+for each row execute function public.add_group_administrators();
+
+create or replace function public.sync_pastor_group_memberships()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.role_app = 'pasteur' then
+    update public.groupe_membre set is_group_admin = true
+    where user_id = new.id and is_group_admin is distinct from true;
+    insert into public.groupe_membre (groupe_id, user_id, is_group_admin)
+    select g.groupe_id, new.id, true from public.groupe g
+    where not exists (
+      select 1 from public.groupe_membre m
+      where m.groupe_id = g.groupe_id and m.user_id = new.id
+    );
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.sync_pastor_group_memberships() from public, anon, authenticated;
+drop trigger if exists sync_pastor_group_memberships on public.user_profil;
+create trigger sync_pastor_group_memberships
+after insert or update of role_app on public.user_profil
+for each row execute function public.sync_pastor_group_memberships();
+
+update public.groupe_membre m set is_group_admin = true
+from public.user_profil p, public.groupe g
+where m.user_id = p.id and m.groupe_id = g.groupe_id
+  and (p.role_app = 'pasteur' or g.created_by = p.id)
+  and m.is_group_admin is distinct from true;
+
+insert into public.groupe_membre (groupe_id, user_id, is_group_admin)
+select g.groupe_id, p.id, true from public.groupe g
+join public.user_profil p on p.role_app = 'pasteur' or p.id = g.created_by
+where not exists (
+  select 1 from public.groupe_membre m
+  where m.groupe_id = g.groupe_id and m.user_id = p.id
+);
+
 commit;

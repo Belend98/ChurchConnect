@@ -104,12 +104,15 @@ export class SupabaseGroupeMembreRepository
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('groupe_membre')
       .delete()
       .eq('gmembre_id', id)
+      .select('gmembre_id')
+      .maybeSingle()
 
     if (error) throw error
+    if (!data) throw new Error('Le membre est introuvable ou vous ne pouvez pas le retirer du groupe.')
   }
 
   async deleteByGroupe(groupeId: string): Promise<void> {
@@ -125,12 +128,14 @@ export class SupabaseGroupeMembreRepository
     groupeId: string,
     userId: string,
   ): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('groupe_membre')
       .delete()
       .eq('groupe_id', groupeId)
       .eq('user_id', userId)
+      .select('gmembre_id')
 
     if (error) throw error
+    if (!data?.length) throw new Error('Le membre est introuvable ou vous ne pouvez pas le retirer du groupe.')
   }
 }

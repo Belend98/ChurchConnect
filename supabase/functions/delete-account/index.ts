@@ -60,6 +60,14 @@ async function handleRequest(req: Request): Promise<Response> {
       return jsonResponse({ error: 'Unauthorized' }, 401)
     }
 
+    const { data: activeSession, error: sessionError } = await supabaseUser.rpc('is_active_account_session')
+    if (sessionError) {
+      return jsonResponse({ error: 'Impossible de vérifier votre session.' }, 500)
+    }
+    if (activeSession !== true) {
+      return jsonResponse({ error: 'Session révoquée ou compte désactivé.' }, 401)
+    }
+
     const bodyText = await req.text()
     let body: unknown = {}
     try {
@@ -79,6 +87,7 @@ async function handleRequest(req: Request): Promise<Response> {
       auth: { persistSession: false, autoRefreshToken: false },
     })
 
+    let actorRole: string | undefined
     if (targetId !== user.id) {
       const { data: actor, error: actorError } = await supabaseAdmin
         .from('user_profil')
@@ -88,8 +97,9 @@ async function handleRequest(req: Request): Promise<Response> {
       if (actorError) {
         return jsonResponse({ error: 'Impossible de vérifier vos permissions.' }, 500)
       }
-      if (actor?.role_app !== 'pasteur') {
-        return jsonResponse({ error: 'Seul un pasteur peut supprimer un autre compte.' }, 403)
+      actorRole = actor?.role_app
+      if (actorRole !== 'pasteur' && actorRole !== 'admin') {
+        return jsonResponse({ error: 'Seuls le pasteur et les administrateurs peuvent supprimer un autre compte.' }, 403)
       }
     }
 
@@ -100,11 +110,18 @@ async function handleRequest(req: Request): Promise<Response> {
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('user_profil')
-      .select('image_url')
+      .select('image_url, role_app')
       .eq('id', targetId)
       .maybeSingle()
     if (profileError) {
       return jsonResponse({ error: 'Impossible de récupérer le profil.' }, 500)
+    }
+
+    if (profile?.role_app === 'pasteur') {
+      return jsonResponse({ error: 'Le compte pasteur ne peut pas être supprimé : l’application ne peut pas rester sans pasteur. Pour ce changement critique, contactez le développeur.' }, 403)
+    }
+    if (targetId !== user.id && actorRole === 'admin' && profile?.role_app !== 'membre') {
+      return jsonResponse({ error: 'Un administrateur peut uniquement supprimer les comptes membres.' }, 403)
     }
 
     let imageBucket = Deno.env.get('SUPABASE_IMAGE_BUCKET') ?? 'church-images'

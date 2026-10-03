@@ -113,12 +113,26 @@ seul. Les tests `tests/group-deletion-permissions.sql` et
 `tests/group-deletion.test.cjs` vérifient ces permissions et le refus d’un succès
 apparent sans ligne supprimée.
 
+### Rôles dans les groupes
+
+Dans le rouage d’un groupe, le créateur et les administrateurs du groupe peuvent
+attribuer le rôle membre ou administrateur et retirer les autres membres, avec
+confirmation. Le pasteur est automatiquement administrateur de chaque groupe :
+son rôle est permanent et il ne peut pas être retiré ni quitter le groupe.
+Le créateur conserve également ses droits de gestion. Ces protections sont
+appliquées dans les services de l’application et par des triggers SQL, y compris
+pour les groupes existants. Supprimer un groupe continue à supprimer ses adhésions.
+
 ### Suppression des comptes
 
-Le pasteur peut supprimer un compte depuis le rouage de la liste des membres,
-avec une confirmation. Les administrateurs gardent uniquement la gestion des
-rôles. Chaque utilisateur peut également supprimer son propre compte dans
-« Mon espace ».
+Le pasteur peut supprimer les comptes membres et administrateurs depuis le
+rouage de la liste des membres, avec une confirmation. Les administrateurs
+peuvent uniquement supprimer les comptes membres. Les membres et administrateurs
+peuvent également supprimer leur propre compte dans « Mon espace ».
+Le compte pasteur est protégé contre toute suppression, y compris par lui-même :
+l’application ne peut pas rester sans pasteur. Un message invite à contacter le
+développeur pour ce changement critique. Ces permissions sont contrôlées dans
+l’Edge Function, avec vérification de la session active.
 
 L’Edge Function `delete-account` vérifie la session et le rôle en base, supprime
 les connexions du compte ciblé (blocage des nouvelles connexions et révocation
@@ -154,10 +168,10 @@ Si le bucket d’images est personnalisé, définir le secret serveur
 `EXPO_PUBLIC_SUPABASE_IMAGE_BUCKET` (par défaut `church-images`). La clé
 `SUPABASE_SERVICE_ROLE_KEY` reste exclusivement côté serveur.
 
-Tests de permissions, de nettoyage Storage et de session locale :
+Tests des permissions de suppression et des sessions révoquées :
 
 ```bash
-node --test tests/delete-account.test.cjs tests/account-session.test.cjs
+node --test tests/delete-account-permissions.test.cjs
 ```
 
 Le test SQL `tests/account-session-rls.sql` vérifie une session active puis

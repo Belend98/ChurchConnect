@@ -12,6 +12,7 @@ import {
   type UpdateGroupeModel,
 } from '@/domain/entités/Groupe'
 import type { MessageGroupeModel } from '@/domain/entités/MessageGroupe'
+import type { GroupeMembreModel } from '@/domain/entités/GroupeMember'
 import type { ProfilModel } from '@/domain/entités/Profil'
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
 import { cacheGroupe, groupeKeys, removeCachedGroupe } from '@/presentation/queries/groupeQueries'
@@ -133,6 +134,22 @@ export default function GroupeDetailScreen() {
       if (currentUserId) cacheGroupe(queryClient, currentUserId, groupe)
     },
   })
+  const memberMutation = useMutation({
+    mutationFn: async (action: { member: GroupeMembreModel; remove: boolean }) => {
+      if (action.remove) await groupeService.removeMembre(action.member.id)
+      else await groupeService.updateMembre(action.member.id, { isGroupAdmin: !action.member.isGroupAdmin })
+    },
+    onMutate: () => ({ userId: currentUserId, groupId }),
+    onSuccess: (_data, action, context) => {
+      if (context?.userId !== currentUserId || context?.groupId !== groupId) return
+      void queryClient.invalidateQueries({ queryKey: groupeKeys.user(currentUserId) })
+      if (action.member.userId === currentUserId && action.remove) {
+        setIsSettingsOpen(false)
+        router.back()
+      }
+    },
+    onError: (error) => setSettingsError(toErrorMessage(error, 'Impossible de modifier ce membre.')),
+  })
   async function removeFromCache() {
     await Promise.all([
       queryClient.cancelQueries({ queryKey: groupeKeys.list(currentUserId) }),
@@ -205,6 +222,27 @@ export default function GroupeDetailScreen() {
       }
     }, [accessibleGroupId, setMessages]),
   )
+
+  function manageMember(member: GroupeMembreModel, remove: boolean) {
+    const profile = memberProfiles[member.userId]
+    if (profile?.roleApp === 'pasteur' || isGroupCreator(groupe, member.userId)) return
+    const name = getProfileName(profile, member.userId)
+    const message = remove
+      ? `Retirer ${name} du groupe ?`
+      : `${member.isGroupAdmin ? 'Attribuer le rôle membre' : 'Attribuer le rôle administrateur'} à ${name} ?`
+    const apply = () => {
+      setSettingsError(null)
+      memberMutation.mutate({ member, remove })
+    }
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) apply()
+    } else {
+      Alert.alert(remove ? 'Retirer un membre' : 'Modifier le rôle', message, [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Confirmer', onPress: apply },
+      ])
+    }
+  }
 
   async function addMember() {
     const trimmedUsername = username.trim()
@@ -654,6 +692,8 @@ export default function GroupeDetailScreen() {
                 {members.map((member) => {
                   const profile = memberProfiles[member.userId]
                   const isCurrentUser = member.userId === currentUserId
+                  const isPastor = profile?.roleApp === 'pasteur'
+                  const canEditMember = canManageMembers && Boolean(profile) && !isPastor && !isGroupCreator(groupe, member.userId)
 
                   return (
                     <View key={member.id} style={styles.memberRow}>
@@ -671,10 +711,20 @@ export default function GroupeDetailScreen() {
                           {isCurrentUser ? ' (vous)' : ''}
                         </Text>
                         <Text style={styles.memberRole}>
-                          {getGroupRoleLabel(
+                          {isPastor ? 'Pasteur · Admin permanent' : getGroupRoleLabel(
                             getGroupRole(groupe, member, member.userId),
                           )}
                         </Text>
+                        {canEditMember ? (
+                          <View style={styles.memberActions}>
+                            <Pressable accessibilityRole="button" disabled={memberMutation.isPending} onPress={() => manageMember(member, false)} style={styles.memberAction}>
+                              <Text style={styles.memberActionText}>{member.isGroupAdmin ? 'Passer membre' : 'Nommer admin'}</Text>
+                            </Pressable>
+                            <Pressable accessibilityRole="button" disabled={memberMutation.isPending} onPress={() => manageMember(member, true)} style={styles.memberAction}>
+                              <Text style={styles.dangerButtonText}>Retirer</Text>
+                            </Pressable>
+                          </View>
+                        ) : null}
                       </View>
                     </View>
                   )
@@ -698,7 +748,7 @@ export default function GroupeDetailScreen() {
                     {isDeleting ? 'Suppression...' : 'Supprimer le groupe'}
                   </Text>
                 </Pressable>
-              ) : (
+              ) : memberProfiles[currentUserId ?? '']?.roleApp !== 'pasteur' ? (
                 <Pressable
                   disabled={isLeaving}
                   onPress={confirmLeaveGroup}
@@ -711,7 +761,7 @@ export default function GroupeDetailScreen() {
                     {isLeaving ? 'Sortie...' : 'Quitter le groupe'}
                   </Text>
                 </Pressable>
-              )}
+              ) : null}
             </ScrollView>
             </View>
           </KeyboardAvoidingView>
@@ -722,6 +772,9 @@ export default function GroupeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  memberActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+  memberAction: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
+  memberActionText: { color: colors.primary, fontWeight: '700' },
   screen: {
     backgroundColor: colors.background,
     flex: 1,
