@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
 const SignUpScreen = () => {
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignUpInput>({
@@ -30,10 +30,7 @@ const SignUpScreen = () => {
         router.replace('/')
         return
       }
-      Alert.alert(
-        'Vérifie ton email',
-        'Ton compte est crée. Vérifie ta boite mail pour confirmer ton adresse.',
-      )
+      setErrorText('Impossible de démarrer ta session. Essaie de te connecter ou contacte un administrateur.')
       
     } catch (error) {
       setErrorText(toErrorMessage(error))

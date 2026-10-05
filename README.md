@@ -375,7 +375,11 @@ Aucun retrait d’accès ni révocation supplémentaire n’est ajouté à ce pa
 
 Sur une base existante, appliquer dans cet ordre l’ajout de `statut_acces` du fichier de création, puis les transactions et les RLS, avant de déployer l’application.
 Le premier compte pasteur doit recevoir son rôle et le statut `accepte` par le développeur dans Supabase ; l’application ne permet pas de s’attribuer ces droits.
-La confirmation d’adresse email peut rester désactivée dans Supabase Auth.
+La confirmation d’adresse email doit être désactivée dans Supabase Auth :
+dans Authentication → Sign In / Providers → Email, désactiver « Confirm email ».
+L’application ouvre directement une session après l’inscription et n’utilise
+aucun écran ni lien de confirmation email. Le fichier `supabase/config.toml`
+applique également ce choix pour Supabase local ; il ne modifie pas le projet hébergé.
 
 ## Rôles et permissions
 

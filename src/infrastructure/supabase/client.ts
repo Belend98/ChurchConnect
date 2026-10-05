@@ -10,14 +10,13 @@ export const supabase = createClient(
   process.env.EXPO_PUBLIC_SUPABASE_KEY!,
   {
     auth: {
-      flowType: 'pkce',
+      detectSessionInUrl: false,
       ...(isWeb
-        ? { persistSession: isBrowser, detectSessionInUrl: true }
+        ? { persistSession: isBrowser }
         : {
             storage: AsyncStorage,
             autoRefreshToken: true,
             persistSession: true,
-            detectSessionInUrl: false,
           }),
     },
   },

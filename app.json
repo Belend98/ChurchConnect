@@ -8,6 +8,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {},
     "android": {
+      "package": "com.churchconnect.app",
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize"
     },

@@ -1,4 +1,3 @@
-import { useSupabaseAuthRedirect } from '@/presentation/hooks/auth/useSupabaseAuthRedirect'
 import { useCurrentSession } from '@/presentation/hooks/auth/useCurrentSession'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { tanstack } from '@/infrastructure/tanstack/client'
@@ -9,8 +8,6 @@ import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 
 export default function RootLayout() {
-  useSupabaseAuthRedirect()
-
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={tanstack}>
@@ -37,7 +34,6 @@ function AppNavigator() {
       <Stack.Screen name="index" />
       <Stack.Protected guard={session !== undefined && (!session || accepted)}>
         <Stack.Screen name="(auth)" />
-        <Stack.Screen name="auth-callback" />
       </Stack.Protected>
       <Stack.Protected guard={Boolean(session) && !accepted}>
         <Stack.Screen name="account-access" />
