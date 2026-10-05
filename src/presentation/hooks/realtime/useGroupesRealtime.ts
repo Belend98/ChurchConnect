@@ -19,7 +19,6 @@ export function useGroupesRealtime() {
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'groupe',
       }, async (payload) => {
-        // Membership events determine which groups belong in "Mes groupes".
         if (!active || payload.eventType === 'INSERT') return
         const id = payload.eventType === 'DELETE'
           ? payload.old.groupe_id as string | undefined
@@ -41,7 +40,6 @@ export function useGroupesRealtime() {
         event: '*', schema: 'public', table: 'groupe_membre',
       }, (payload) => {
         if (!active) return
-        // With RLS, a DELETE may contain only gmembre_id: recheck access via the service.
         if (payload.eventType === 'DELETE') {
           void queryClient.invalidateQueries({ queryKey })
           return
@@ -56,7 +54,6 @@ export function useGroupesRealtime() {
       })
       .subscribe((status) => {
         if (active && status === 'SUBSCRIBED') {
-          // Catch changes missed before subscription or during a disconnection.
           void queryClient.invalidateQueries({ queryKey })
         }
       })

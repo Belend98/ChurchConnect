@@ -1,11 +1,13 @@
 import { annonceService } from '@/composition/annonce'
 import type { CreateAnnonceModel } from '@/domain/entités/Annonce'
+import { canManagePredications } from '@/domain/entités/Profil'
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
-import { applyAnnonceChange } from '@/presentation/queries/annonceQueries'
+import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
+import { annoncesQueryKey, applyAnnonceChange } from '@/presentation/queries/annonceQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { router } from 'expo-router'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import {
   Alert,
@@ -18,27 +20,49 @@ import {
 } from 'react-native'
 
 export default function CreateAnnonceScreen() {
+  const params = useLocalSearchParams<{ id?: string | string[] }>()
+  const annonceId = Array.isArray(params.id) ? params.id[0] : params.id
+  const isEditing = Boolean(annonceId)
+  const [hydratedId, setHydratedId] = useState<string | null>(null)
   const [contenu, setContenu] = useState('')
   const [errorText, setErrorText] = useState<string | null>(null)
-  const [imageUrl, setImageUrl] = useState('')
   const [titre, setTitre] = useState('')
   const userId = useCurrentUserId()
+  const { data: profile, isPending: isLoadingProfile, isSessionLoading, isError: isProfileError } = useCurrentProfile()
+  const canManage = !isProfileError && profile?.statutAcces === 'accepte' && canManagePredications(profile.roleApp)
+  const isCheckingAccess = isSessionLoading || Boolean(userId && isLoadingProfile)
   const queryClient = useQueryClient()
-  const createMutation = useMutation({
+  const annonceQuery = useQuery({
+    queryKey: [...annoncesQueryKey(userId), 'detail', annonceId],
+    queryFn: () => annonceService.getAnnonce(annonceId!),
+    enabled: Boolean(annonceId && userId && canManage),
+  })
+
+  if (annonceId && annonceQuery.data && !annonceQuery.isFetching && hydratedId !== annonceId) {
+    setTitre(annonceQuery.data.titre)
+    setContenu(annonceQuery.data.contenu)
+    setHydratedId(annonceId)
+  }
+
+  const saveMutation = useMutation({
     mutationFn: (data: Omit<CreateAnnonceModel, 'createdBy'>) =>
-      annonceService.createAnnonce(data),
+      annonceId ? annonceService.updateAnnonce(annonceId, data) : annonceService.createAnnonce(data),
     onMutate: () => ({ userId }),
     onSuccess: (annonce, _data, context) => {
       if (!context?.userId || context.userId !== userId) return
+      if (annonceId) {
+        queryClient.setQueryData([...annoncesQueryKey(userId), 'detail', annonceId], annonce)
+      }
       return applyAnnonceChange(queryClient, userId, { type: 'upsert', annonce })
     },
   })
-  const isSubmitting = createMutation.isPending
+  const isSubmitting = saveMutation.isPending
+  const canEdit = canManage && (!isEditing || (hydratedId === annonceId && Boolean(annonceQuery.data) && !annonceQuery.isError))
 
-  async function createAnnonce() {
+  async function saveAnnonce() {
+    if (isSubmitting || !canEdit) return
     const trimmedTitre = titre.trim()
     const trimmedContenu = contenu.trim()
-    const trimmedImageUrl = imageUrl.trim()
 
     setErrorText(null)
 
@@ -53,16 +77,16 @@ export default function CreateAnnonceScreen() {
     }
 
     try {
-      await createMutation.mutateAsync({
+      await saveMutation.mutateAsync({
         titre: trimmedTitre,
         contenu: trimmedContenu,
-        imageUrl: trimmedImageUrl || undefined,
       })
 
-      Alert.alert('Annonce créée', "L'annonce est maintenant disponible.")
+      Alert.alert(isEditing ? 'Annonce modifiée' : 'Annonce créée',
+        isEditing ? 'Les changements sont enregistrés.' : "L'annonce est maintenant disponible.")
       router.back()
     } catch (error) {
-      setErrorText(toErrorMessage(error, "Impossible de créer l'annonce."))
+      setErrorText(toErrorMessage(error, isEditing ? "Impossible de modifier l'annonce." : "Impossible de créer l'annonce."))
     }
   }
 
@@ -81,55 +105,61 @@ export default function CreateAnnonceScreen() {
       </View>
 
       <View>
-        <Text style={styles.title}>Créer une annonce</Text>
+        <Text style={styles.title}>{isEditing ? 'Modifier une annonce' : 'Créer une annonce'}</Text>
       </View>
 
-      <View style={styles.formCard}>
-        <Text style={styles.label}>Titre</Text>
-        <TextInput
-          onChangeText={setTitre}
-          placeholder="Titre de l'annonce"
-          placeholderTextColor={colors.outline}
-          style={styles.input}
-          value={titre}
-        />
+      {isCheckingAccess ? <Text>Vérification des droits...</Text> : !canManage ? (
+        <Text style={styles.errorText}>Seuls les pasteurs et administrateurs peuvent gérer les annonces.</Text>
+      ) : isEditing && (annonceQuery.isPending || (!hydratedId && annonceQuery.isFetching)) ? <Text>Chargement de l&apos;annonce...</Text> : null}
+      {canManage && isEditing && annonceQuery.isError ? (
+        <View>
+          <Text style={styles.errorText}>{toErrorMessage(annonceQuery.error, "Impossible de charger l'annonce.")}</Text>
+          <Pressable accessibilityRole="button" onPress={() => void annonceQuery.refetch()}>
+            <Text style={styles.label}>Réessayer</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      {canManage && isEditing && annonceQuery.isSuccess && !annonceQuery.data ? (
+        <Text style={styles.errorText}>Cette annonce n&apos;est plus disponible.</Text>
+      ) : null}
 
-        <Text style={styles.label}>Contenu</Text>
-        <TextInput
-          multiline
-          numberOfLines={6}
-          onChangeText={setContenu}
-          placeholder="Écris ton annonce"
-          placeholderTextColor={colors.outline}
-          style={[styles.input, styles.multiline]}
-          textAlignVertical="top"
-          value={contenu}
-        />
+      {canEdit ? (
+        <View style={styles.formCard}>
+          <Text style={styles.label}>Titre</Text>
+          <TextInput
+            onChangeText={setTitre}
+            placeholder="Titre de l'annonce"
+            placeholderTextColor={colors.outline}
+            style={styles.input}
+            value={titre}
+          />
 
-        <Text style={styles.label}>Image URL</Text>
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          onChangeText={setImageUrl}
-          placeholder="https://..."
-          placeholderTextColor={colors.outline}
-          style={styles.input}
-          value={imageUrl}
-        />
+          <Text style={styles.label}>Contenu</Text>
+          <TextInput
+            multiline
+            numberOfLines={6}
+            onChangeText={setContenu}
+            placeholder="Écris ton annonce"
+            placeholderTextColor={colors.outline}
+            style={[styles.input, styles.multiline]}
+            textAlignVertical="top"
+            value={contenu}
+          />
 
-        {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+          {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
-        <Pressable
-          disabled={isSubmitting || !userId}
-          onPress={createAnnonce}
-          style={[styles.button, isSubmitting && styles.buttonDisabled]}
-        >
-          <Text style={styles.buttonText}>
-            {isSubmitting ? 'Création...' : "Créer l'annonce"}
-          </Text>
-        </Pressable>
-      </View>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSubmitting || !userId}
+            onPress={saveAnnonce}
+            style={[styles.button, isSubmitting && styles.buttonDisabled]}
+          >
+            <Text style={styles.buttonText}>
+              {isSubmitting ? 'Enregistrement...' : isEditing ? 'Enregistrer les modifications' : "Créer l'annonce"}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </ScrollView>
   )
 }

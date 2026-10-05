@@ -38,6 +38,7 @@ export class SupabaseMessageGroupeRepository
     const { data: message, error } = await supabase
       .from('message_groupe')
       .insert({
+        ...(data.id ? { message_id: data.id } : {}),
         groupe_id: data.groupeId,
         user_id: data.userId,
         contenu: data.contenu,
@@ -45,6 +46,20 @@ export class SupabaseMessageGroupeRepository
       .select(MESSAGE_GROUPE_SELECT)
       .single()
 
+    // Une réponse perdue peut laisser un message déjà enregistré : le retrouver
+    // avec le même identifiant évite un second message et une seconde notification.
+    if (error?.code === '23505' && data.id) {
+      const { data: existing, error: lookupError } = await supabase
+        .from('message_groupe')
+        .select(MESSAGE_GROUPE_SELECT)
+        .eq('message_id', data.id)
+        .eq('groupe_id', data.groupeId)
+        .eq('user_id', data.userId)
+        .eq('contenu', data.contenu)
+        .single()
+      if (lookupError) throw lookupError
+      return mapMessageGroupe(existing as MessageGroupeRow)
+    }
     if (error) throw error
 
     return mapMessageGroupe(message as MessageGroupeRow)

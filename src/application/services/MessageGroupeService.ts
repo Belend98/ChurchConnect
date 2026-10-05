@@ -25,10 +25,12 @@ export class MessageGroupeService {
   async createMessage(
     groupeId: string,
     contenu: string,
+    messageId?: string,
   ): Promise<MessageGroupeModel> {
     const userId = await this.ensureCurrentUserCanWriteInGroup(groupeId)
 
     return this.messageGroupeRepository.create({
+      id: messageId,
       groupeId,
       userId,
       contenu,

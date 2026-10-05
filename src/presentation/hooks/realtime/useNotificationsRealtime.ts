@@ -28,7 +28,6 @@ export function useNotificationsRealtime() {
       .on('postgres_changes', {
         event: 'DELETE', schema: 'public', table: 'notification',
       }, (payload) => {
-        // DELETE may contain only the primary key with RLS enabled.
         const id = payload.old.notification_id as string | undefined
         if (active && id) void applyNotificationChange(queryClient, userId, { type: 'delete', id })
       })

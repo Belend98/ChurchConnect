@@ -95,6 +95,15 @@ export class SupabaseNotificationRepository
     if (error) throw error
   }
 
+  async deleteByUser(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('notification')
+      .delete()
+      .eq('user_id', userId)
+
+    if (error) throw error
+  }
+
   subscribeToUserNotifications(
     userId: string,
     onNotification: (notification: NotificationModel) => void,

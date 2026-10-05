@@ -41,6 +41,11 @@ export class NotificationService {
     await this.notificationRepository.deleteById(id, userId)
   }
 
+  async deleteAllMyNotifications(): Promise<void> {
+    const userId = await this.authService.getCurrentUserIdOrThrow()
+    await this.notificationRepository.deleteByUser(userId)
+  }
+
   async subscribeToMyNotifications(
     onNotification: (notification: NotificationModel) => void,
   ): Promise<UnsubscribeNotification> {

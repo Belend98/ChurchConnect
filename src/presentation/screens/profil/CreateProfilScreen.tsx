@@ -82,7 +82,6 @@ const ProfileSetupScreen = () => {
 
   useEffect(() => {
     if (!userId || !isSuccess || hydratedUserId.current === userId) return
-    // Hydrate once per account so Realtime does not overwrite edits in progress.
     reset({
       username: profile?.username ?? '',
       nom: profile?.nom ?? '',
@@ -115,6 +114,17 @@ const ProfileSetupScreen = () => {
   })
   const isSaving = isSubmitting || saveProfileMutation.isPending
 
+  useEffect(() => {
+    if (
+      !saveProfileMutation.isSuccess ||
+      saveProfileMutation.variables?.id !== userId ||
+      profile?.id !== userId ||
+      !profile?.username
+    ) return
+
+    router.replace(profile.statutAcces === 'accepte' ? '/(tabs)/home' : '/account-access')
+  }, [profile, userId, saveProfileMutation.isSuccess, saveProfileMutation.variables?.id])
+
   const onSubmit = async (data: CreateUserInput) => {
     setErrorText(null)
     clearImagePickerError()
@@ -129,7 +139,6 @@ const ProfileSetupScreen = () => {
       await saveProfileMutation.mutateAsync({ id: userId, data })
 
       Alert.alert('Profil enregistré', 'Ton profil est pret.')
-      router.replace('../(tabs)/home')
     } catch (error) {
       setErrorText(toReadableProfileError(error))
     }

@@ -10,6 +10,6 @@ export interface MessageGroupeModel {
 export type CreateMessageGroupeModel = Omit<
   MessageGroupeModel,
   'id' | 'createdAt' | 'updatedAt' | 'userId'
-> & { userId: string }
+> & { userId: string; id?: string }
 
 export type UnsubscribeMessageGroupe = () => void

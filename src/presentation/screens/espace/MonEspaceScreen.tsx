@@ -92,6 +92,11 @@ export default function MonEspaceScreen() {
           )}
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{displayName}</Text>
+            {profile?.username ? (
+              <Text numberOfLines={1} style={[styles.profileMeta, styles.profileUsername]}>
+                {profile.username}
+              </Text>
+            ) : null}
             <Text numberOfLines={1} style={styles.profileMeta}>
               {email ?? 'Utilisateur connecté'}
             </Text>
@@ -191,7 +196,7 @@ export default function MonEspaceScreen() {
         ) : null}
       </View>
 
-      <Pressable disabled={isDeleting} onPress={signOut} style={styles.signOutButton}>
+      <Pressable accessibilityRole="button" disabled={isDeleting} onPress={signOut} style={[styles.signOutButton, isDeleting && { opacity: 0.6 }]}>
         <Text style={styles.signOutButtonText}>Se déconnecter</Text>
       </Pressable>
       <Pressable
@@ -199,9 +204,9 @@ export default function MonEspaceScreen() {
         accessibilityState={{ disabled: isDeleting, busy: isDeleting }}
         disabled={isDeleting}
         onPress={confirmDeletion}
-        style={[styles.signOutButton, isDeleting && { opacity: 0.6 }]}
+        style={[styles.deleteAccountButton, isDeleting && { opacity: 0.6 }]}
       >
-        <Text style={styles.signOutButtonText}>
+        <Text style={styles.deleteAccountButtonText}>
           {isDeleting ? 'Suppression en cours...' : 'Supprimer mon compte'}
         </Text>
       </Pressable>
@@ -427,14 +432,29 @@ const styles = StyleSheet.create({
   signOutButton: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainerLowest,
-    borderColor: colors.error,
+    borderColor: colors.primary,
     borderRadius: 8,
     borderWidth: 1,
     minHeight: 50,
     justifyContent: 'center',
   },
   signOutButtonText: {
-    color: colors.error,
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  profileUsername: {
+    fontWeight: '700',
+  },
+  deleteAccountButton: {
+    alignItems: 'center',
+    backgroundColor: colors.error,
+    borderRadius: 8,
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  deleteAccountButtonText: {
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '900',
   },

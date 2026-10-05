@@ -1,5 +1,6 @@
 import { useSupabaseAuthRedirect } from '@/presentation/hooks/auth/useSupabaseAuthRedirect'
 import { useCurrentSession } from '@/presentation/hooks/auth/useCurrentSession'
+import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { tanstack } from '@/infrastructure/tanstack/client'
 import { RealtimeSync } from '@/presentation/providers/RealtimeSync'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -9,7 +10,6 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 
 export default function RootLayout() {
   useSupabaseAuthRedirect()
-  const session = useCurrentSession()
 
   return (
     <SafeAreaProvider>
@@ -20,25 +20,39 @@ export default function RootLayout() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.keyboardAvoidingView}
           >
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="auth-callback" />
-              <Stack.Protected guard={Boolean(session)}>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="create-annonce" />
-                <Stack.Screen name="create-groupe" />
-                <Stack.Screen name="groupe-detail" />
-                <Stack.Screen name="notifications" />
-                <Stack.Screen name="create-predication" />
-                <Stack.Screen name="update-predication" />
-                <Stack.Screen name="predication-player" />
-              </Stack.Protected>
-            </Stack>
+            <AppNavigator />
           </KeyboardAvoidingView>
         </SafeAreaView>
       </QueryClientProvider>
     </SafeAreaProvider>
+  )
+}
+
+function AppNavigator() {
+  const session = useCurrentSession()
+  const { data: profile } = useCurrentProfile()
+  const accepted = profile?.statutAcces === 'accepte'
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Protected guard={session !== undefined && (!session || accepted)}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="auth-callback" />
+      </Stack.Protected>
+      <Stack.Protected guard={Boolean(session) && !accepted}>
+        <Stack.Screen name="account-access" />
+      </Stack.Protected>
+      <Stack.Protected guard={Boolean(session) && accepted && Boolean(profile?.username)}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="create-annonce" />
+        <Stack.Screen name="create-groupe" />
+        <Stack.Screen name="groupe-detail" />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="create-predication" />
+        <Stack.Screen name="update-predication" />
+        <Stack.Screen name="predication-player" />
+      </Stack.Protected>
+    </Stack>
   )
 }
 

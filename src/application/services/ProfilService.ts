@@ -49,8 +49,32 @@ export class ProfilService {
     }
   }
 
-  getMyProfile(userId: string) {
-    return this.profilRepository.getProfile(userId)
+  async getMyProfile(userId: string, nom?: string, prenom?: string) {
+    const profile = await this.profilRepository.getProfile(userId)
+    if (profile) return profile
+    return this.profilRepository.ensurePendingProfile(userId, nom || 'Nouveau membre', prenom)
+  }
+
+  async listAccessRequests() {
+    await this.requireAccessManager()
+    return this.profilRepository.listAccessRequests()
+  }
+
+  async listRejectedMembers() {
+    await this.requireAccessManager()
+    return this.profilRepository.listRejectedMembers()
+  }
+
+  async decideAccess(userId: string, accepted: boolean) {
+    await this.requireAccessManager()
+    return this.profilRepository.decideAccess(userId, accepted)
+  }
+
+  private async requireAccessManager() {
+    const profile = await this.getCurrentUserProfileOrThrow()
+    if (profile.statutAcces !== 'accepte' || !['pasteur', 'admin'].includes(profile.roleApp)) {
+      throw new Error('Seuls le pasteur et les administrateurs peuvent gérer les demandes.')
+    }
   }
 
   listCommunityMembers(limit?: number) {

@@ -20,9 +20,10 @@ import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -40,11 +41,10 @@ function getParam(value: string | string[] | undefined): string {
 }
 
 function getProfileName(profile: ProfilModel | undefined, userId: string | null) {
-  if (userId === null) return 'Utilisateur supprimé'
-  if (!profile) return `Membre ${userId.slice(0, 6)}`
+  if (userId === null || !profile) return 'Utilisateur indisponible'
 
   const fullName = [profile.prenom, profile.nom].filter(Boolean).join(' ')
-  return fullName || profile.username || `Membre ${userId.slice(0, 6)}`
+  return fullName || profile.username || 'Utilisateur indisponible'
 }
 
 function formatMessageTime(date: Date) {
@@ -65,6 +65,14 @@ function appendMessageUnique(
   )
 }
 
+function createMessageId() {
+  if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID()
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
+    const value = Math.floor(Math.random() * 16)
+    return (character === 'x' ? value : (value & 3) | 8).toString(16)
+  })
+}
+
 export default function GroupeDetailScreen() {
   const params = useLocalSearchParams()
   const groupId = getParam(params.id)
@@ -78,6 +86,8 @@ export default function GroupeDetailScreen() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isSendingMessage, setIsSendingMessage] = useState(false)
+  const sendingMessage = useRef(false)
+  const pendingMessage = useRef<{ id: string; groupId: string; userId: string; text: string } | null>(null)
   const [messageText, setMessageText] = useState('')
   const [messages, setMessages] = useState<MessageGroupeModel[]>([])
   const [messagesError, setMessagesError] = useState<string | null>(null)
@@ -224,6 +234,7 @@ export default function GroupeDetailScreen() {
   )
 
   function manageMember(member: GroupeMembreModel, remove: boolean) {
+    if (remove && member.userId === currentUserId) return
     const profile = memberProfiles[member.userId]
     if (profile?.roleApp === 'pasteur' || isGroupCreator(groupe, member.userId)) return
     const name = getProfileName(profile, member.userId)
@@ -343,16 +354,18 @@ export default function GroupeDetailScreen() {
   }
 
   function confirmLeaveGroup() {
+    if (isLeaving || isDeleting) return
     const title = groupe?.name ?? groupName
+    const message = `Voulez-vous quitter "${title}" ? Le groupe et ses messages seront supprimés s’il devient vide ou s’il ne reste que le pasteur sans qu’il en soit le créateur.`
 
     if (Platform.OS === 'web') {
-      const confirmed = window.confirm(`Voulez-vous quitter "${title}" ?`)
+      const confirmed = window.confirm(message)
 
       if (confirmed) void leaveGroup()
       return
     }
 
-    Alert.alert('Quitter le groupe', `Voulez-vous quitter "${title}" ?`, [
+    Alert.alert('Quitter le groupe', message, [
       { style: 'cancel', text: 'Annuler' },
       {
         onPress: () => leaveGroup(),
@@ -363,13 +376,9 @@ export default function GroupeDetailScreen() {
   }
 
   async function leaveGroup() {
+    if (isLeaving || isDeleting) return
     if (!groupId || !currentUserId) {
       setSettingsError('Impossible de retrouver ton accès au groupe.')
-      return
-    }
-
-    if (isGroupCreator(groupe, currentUserId)) {
-      setSettingsError('Le créateur doit supprimer le groupe plutôt que le quitter.')
       return
     }
 
@@ -385,6 +394,7 @@ export default function GroupeDetailScreen() {
   }
 
   async function sendMessage() {
+    if (sendingMessage.current || !currentUserId) return
     const trimmedMessage = messageText.trim()
 
     setMessagesError(null)
@@ -396,21 +406,29 @@ export default function GroupeDetailScreen() {
 
     if (!trimmedMessage) return
 
+    sendingMessage.current = true
     setIsSendingMessage(true)
 
     try {
+      if (!pendingMessage.current || pendingMessage.current.groupId !== groupId ||
+          pendingMessage.current.userId !== currentUserId || pendingMessage.current.text !== trimmedMessage) {
+        pendingMessage.current = { id: createMessageId(), groupId, userId: currentUserId, text: trimmedMessage }
+      }
       const createdMessage = await messageGroupeService.createMessage(
         groupId,
         trimmedMessage,
+        pendingMessage.current.id,
       )
 
       setMessages((currentMessages) =>
         appendMessageUnique(currentMessages, createdMessage),
       )
       setMessageText('')
+      pendingMessage.current = null
     } catch (error) {
       setMessagesError(toErrorMessage(error, 'Impossible d’envoyer ce message.'))
     } finally {
+      sendingMessage.current = false
       setIsSendingMessage(false)
     }
   }
@@ -539,13 +557,14 @@ export default function GroupeDetailScreen() {
         })}
 
         {messagesError ? (
-          <Text style={styles.errorText}>{messagesError}</Text>
+          <Text accessibilityRole="alert" style={styles.errorText}>{messagesError}</Text>
         ) : null}
       </ScrollView>
 
       {canManageGroup ? (
         <View style={styles.composer}>
           <TextInput
+            editable={!isSendingMessage}
             multiline
             onChangeText={setMessageText}
             placeholder="Message"
@@ -554,12 +573,14 @@ export default function GroupeDetailScreen() {
             value={messageText}
           />
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={messagesError ? 'Réessayer l’envoi du message' : 'Envoyer le message'}
             disabled={isSendingMessage || !messageText.trim()}
             onPress={sendMessage}
             style={[
               styles.sendButton,
               (isSendingMessage || !messageText.trim()) &&
-                styles.disabledButton,
+              styles.disabledButton,
             ]}
           >
             <Text style={styles.sendButtonText}>➤</Text>
@@ -585,42 +606,42 @@ export default function GroupeDetailScreen() {
             style={styles.modalKeyboardAvoidingView}
           >
             <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Ajouter un membre</Text>
-              <Pressable onPress={() => setIsAddMemberOpen(false)}>
-                <Text style={styles.modalClose}>Fermer</Text>
-              </Pressable>
-            </View>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Ajouter un membre</Text>
+                <Pressable onPress={() => setIsAddMemberOpen(false)}>
+                  <Text style={styles.modalClose}>Fermer</Text>
+                </Pressable>
+              </View>
 
-            <Text style={styles.modalText}>
-              Entre le nom d’utilisateur du membre à ajouter au groupe.
-            </Text>
-
-            <TextInput
-              autoCapitalize="none"
-              onChangeText={setUsername}
-              placeholder="username"
-              placeholderTextColor={colors.outline}
-              style={styles.memberInput}
-              value={username}
-            />
-
-            {addMemberError ? (
-              <Text style={styles.errorText}>{addMemberError}</Text>
-            ) : null}
-
-            <Pressable
-              disabled={isAddingMember}
-              onPress={addMember}
-              style={[
-                styles.confirmButton,
-                isAddingMember && styles.disabledButton,
-              ]}
-            >
-              <Text style={styles.confirmButtonText}>
-                {isAddingMember ? 'Ajout...' : 'Ajouter au groupe'}
+              <Text style={styles.modalText}>
+                Entre le nom d’utilisateur du membre à ajouter au groupe.
               </Text>
-            </Pressable>
+
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={setUsername}
+                placeholder="username"
+                placeholderTextColor={colors.outline}
+                style={styles.memberInput}
+                value={username}
+              />
+
+              {addMemberError ? (
+                <Text style={styles.errorText}>{addMemberError}</Text>
+              ) : null}
+
+              <Pressable
+                disabled={isAddingMember}
+                onPress={addMember}
+                style={[
+                  styles.confirmButton,
+                  isAddingMember && styles.disabledButton,
+                ]}
+              >
+                <Text style={styles.confirmButtonText}>
+                  {isAddingMember ? 'Ajout...' : 'Ajouter au groupe'}
+                </Text>
+              </Pressable>
             </View>
           </KeyboardAvoidingView>
         </View>
@@ -638,131 +659,142 @@ export default function GroupeDetailScreen() {
             style={styles.modalKeyboardAvoidingView}
           >
             <View style={styles.settingsCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Paramètres</Text>
-              <Pressable onPress={() => setIsSettingsOpen(false)}>
-                <Text style={styles.modalClose}>Fermer</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView
-              contentContainerStyle={styles.settingsContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {canManageGroup ? (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Informations</Text>
-
-                  <TextInput
-                    onChangeText={setEditName}
-                    placeholder="Nom du groupe"
-                    placeholderTextColor={colors.outline}
-                    style={styles.memberInput}
-                    value={editName}
-                  />
-
-                  <TextInput
-                    multiline
-                    onChangeText={setEditDescription}
-                    placeholder="Description"
-                    placeholderTextColor={colors.outline}
-                    style={[styles.memberInput, styles.descriptionInput]}
-                    value={editDescription}
-                  />
-
-                  <Pressable
-                    disabled={isUpdating}
-                    onPress={updateGroup}
-                    style={[
-                      styles.confirmButton,
-                      isUpdating && styles.disabledButton,
-                    ]}
-                  >
-                    <Text style={styles.confirmButtonText}>
-                      {isUpdating ? 'Modification...' : 'Modifier le groupe'}
-                    </Text>
-                  </Pressable>
-                </View>
-              ) : null}
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Membres</Text>
-
-                {members.map((member) => {
-                  const profile = memberProfiles[member.userId]
-                  const isCurrentUser = member.userId === currentUserId
-                  const isPastor = profile?.roleApp === 'pasteur'
-                  const canEditMember = canManageMembers && Boolean(profile) && !isPastor && !isGroupCreator(groupe, member.userId)
-
-                  return (
-                    <View key={member.id} style={styles.memberRow}>
-                      <View style={styles.memberAvatar}>
-                        <Text style={styles.memberAvatarText}>
-                          {getProfileName(profile, member.userId)
-                            .charAt(0)
-                            .toUpperCase()}
-                        </Text>
-                      </View>
-
-                      <View style={styles.memberInfo}>
-                        <Text numberOfLines={1} style={styles.memberName}>
-                          {getProfileName(profile, member.userId)}
-                          {isCurrentUser ? ' (vous)' : ''}
-                        </Text>
-                        <Text style={styles.memberRole}>
-                          {isPastor ? 'Pasteur · Admin permanent' : getGroupRoleLabel(
-                            getGroupRole(groupe, member, member.userId),
-                          )}
-                        </Text>
-                        {canEditMember ? (
-                          <View style={styles.memberActions}>
-                            <Pressable accessibilityRole="button" disabled={memberMutation.isPending} onPress={() => manageMember(member, false)} style={styles.memberAction}>
-                              <Text style={styles.memberActionText}>{member.isGroupAdmin ? 'Passer membre' : 'Nommer admin'}</Text>
-                            </Pressable>
-                            <Pressable accessibilityRole="button" disabled={memberMutation.isPending} onPress={() => manageMember(member, true)} style={styles.memberAction}>
-                              <Text style={styles.dangerButtonText}>Retirer</Text>
-                            </Pressable>
-                          </View>
-                        ) : null}
-                      </View>
-                    </View>
-                  )
-                })}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Paramètres</Text>
+                <Pressable onPress={() => setIsSettingsOpen(false)}>
+                  <Text style={styles.modalClose}>Fermer</Text>
+                </Pressable>
               </View>
 
-              {settingsError ? (
-                <Text style={styles.errorText}>{settingsError}</Text>
-              ) : null}
+              <ScrollView
+                contentContainerStyle={styles.settingsContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {canManageGroup ? (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Informations</Text>
 
-              {canDeleteCurrentGroup ? (
+                    <TextInput
+                      onChangeText={setEditName}
+                      placeholder="Nom du groupe"
+                      placeholderTextColor={colors.outline}
+                      style={styles.memberInput}
+                      value={editName}
+                    />
+
+                    <TextInput
+                      multiline
+                      onChangeText={setEditDescription}
+                      placeholder="Description"
+                      placeholderTextColor={colors.outline}
+                      style={[styles.memberInput, styles.descriptionInput]}
+                      value={editDescription}
+                    />
+
+                    <Pressable
+                      disabled={isUpdating}
+                      onPress={updateGroup}
+                      style={[
+                        styles.confirmButton,
+                        isUpdating && styles.disabledButton,
+                      ]}
+                    >
+                      <Text style={styles.confirmButtonText}>
+                        {isUpdating ? 'Modification...' : 'Modifier le groupe'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Membres</Text>
+
+                  {members.map((member) => {
+                    const profile = memberProfiles[member.userId]
+                    const isCurrentUser = member.userId === currentUserId
+                    const isPastor = profile?.roleApp === 'pasteur'
+                    const canEditMember = canManageMembers && Boolean(profile) && !isPastor && !isGroupCreator(groupe, member.userId)
+
+                    return (
+                      <View key={member.id} style={styles.memberRow}>
+                        {profile?.imageUrl ? (
+                          <Image
+                            source={{ uri: profile.imageUrl }}
+                            style={styles.memberAvatarImage}
+                          />
+                        ) : (
+                          <View style={styles.memberAvatar}>
+                            <Text style={styles.memberAvatarText}>
+                              {getProfileName(profile, member.userId)
+                                .charAt(0)
+                                .toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
+
+                        <View style={styles.memberInfo}>
+                          <Text numberOfLines={1} style={styles.memberName}>
+                            {getProfileName(profile, member.userId)}
+                            {isCurrentUser ? ' (moi)' : ''}
+                          </Text>
+                          <Text style={styles.memberRole}>
+                            {isPastor ? 'Pasteur ' : getGroupRoleLabel(
+                              getGroupRole(groupe, member, member.userId),
+                            )}
+                          </Text>
+                          {canEditMember ? (
+                            <View style={styles.memberActions}>
+                              <Pressable accessibilityRole="button" disabled={memberMutation.isPending} onPress={() => manageMember(member, false)} style={styles.memberAction}>
+                                <Text style={styles.memberActionText}>{member.isGroupAdmin ? 'Passer membre' : 'Nommer admin'}</Text>
+                              </Pressable>
+                              {!isCurrentUser ? (
+                                <Pressable accessibilityRole="button" disabled={memberMutation.isPending} onPress={() => manageMember(member, true)} style={styles.memberAction}>
+                                  <Text style={styles.dangerButtonText}>Retirer</Text>
+                                </Pressable>
+                              ) : null}
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
+                    )
+                  })}
+                </View>
+
+                {settingsError ? (
+                  <Text style={styles.errorText}>{settingsError}</Text>
+                ) : null}
+
                 <Pressable
-                  disabled={isDeleting}
-                  onPress={confirmDeleteGroup}
-                  style={[
-                    styles.dangerButton,
-                    isDeleting && styles.disabledButton,
-                  ]}
-                >
-                  <Text style={styles.dangerButtonText}>
-                    {isDeleting ? 'Suppression...' : 'Supprimer le groupe'}
-                  </Text>
-                </Pressable>
-              ) : memberProfiles[currentUserId ?? '']?.roleApp !== 'pasteur' ? (
-                <Pressable
-                  disabled={isLeaving}
+                  accessibilityRole="button"
+                  disabled={isLeaving || isDeleting}
                   onPress={confirmLeaveGroup}
                   style={[
-                    styles.dangerButton,
-                    isLeaving && styles.disabledButton,
+                    styles.leaveButton,
+                    (isLeaving || isDeleting) && styles.disabledButton,
                   ]}
                 >
-                  <Text style={styles.dangerButtonText}>
+                  <Text style={styles.leaveButtonText}>
                     {isLeaving ? 'Sortie...' : 'Quitter le groupe'}
                   </Text>
                 </Pressable>
-              ) : null}
-            </ScrollView>
+
+                {canDeleteCurrentGroup ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={isDeleting || isLeaving}
+                    onPress={confirmDeleteGroup}
+                    style={[
+                      styles.deleteGroupButton,
+                      (isDeleting || isLeaving) && styles.disabledButton,
+                    ]}
+                  >
+                    <Text style={styles.deleteGroupButtonText}>
+                      {isDeleting ? 'Suppression...' : 'Supprimer le groupe'}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </ScrollView>
             </View>
           </KeyboardAvoidingView>
         </View>
@@ -1049,6 +1081,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
   },
+  memberAvatarImage: {
+    borderRadius: 18,
+    height: 36,
+    width: 36,
+  },
   memberInfo: {
     flex: 1,
   },
@@ -1063,14 +1100,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 2,
   },
-  dangerButton: {
+  leaveButton: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainer,
-    borderColor: colors.error,
-    borderRadius: 12,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderColor: colors.primary,
+    borderRadius: 8,
     borderWidth: 1,
     height: 50,
     justifyContent: 'center',
+  },
+  leaveButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  deleteGroupButton: {
+    alignItems: 'center',
+    backgroundColor: colors.error,
+    borderRadius: 8,
+    height: 50,
+    justifyContent: 'center',
+  },
+  deleteGroupButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
   dangerButtonText: {
     color: colors.error,

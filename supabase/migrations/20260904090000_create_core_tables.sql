@@ -10,13 +10,17 @@ create table if not exists public.user_profil (
   bio text,
   date_naissance date,
   created_at timestamptz not null default now(),
-  is_admin boolean,
   role_app text not null default 'membre'::text,
   image_url text,
   constraint user_profil_pkey primary key (id),
   constraint user_profil_role_app_check
     check (role_app = any (array['pasteur'::text, 'admin'::text, 'membre'::text]))
 );
+
+alter table public.user_profil
+  add column if not exists statut_acces text not null default 'accepte'
+  constraint user_profil_statut_acces_check check (statut_acces in ('en_attente', 'accepte', 'refuse'));
+alter table public.user_profil alter column statut_acces set default 'en_attente';
 
 create table if not exists public.categorie_predication (
   categorie_id uuid not null default gen_random_uuid(),
@@ -36,6 +40,16 @@ create table if not exists public.predication (
     foreign key (categorie_id)
     references public.categorie_predication(categorie_id)
 );
+
+create unique index if not exists categorie_predication_name_unique
+  on public.categorie_predication (lower(btrim(regexp_replace(name, '\s+', ' ', 'g'))));
+
+alter table public.predication
+  drop constraint predication_categorie_fkey,
+  add constraint predication_categorie_fkey
+    foreign key (categorie_id)
+    references public.categorie_predication(categorie_id)
+    on delete set null;
 
 create table if not exists public.predication_favorites (
   user_id uuid not null,
@@ -96,7 +110,6 @@ create table if not exists public.annonce (
   annonce_id uuid not null default gen_random_uuid(),
   titre text not null,
   contenu text not null,
-  image_url text,
   created_by uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz,
@@ -105,6 +118,9 @@ create table if not exists public.annonce (
     foreign key (created_by)
     references public.user_profil(id)
 );
+
+alter table public.annonce
+  drop column if exists image_url;
 
 create table if not exists public.message_groupe (
   message_id uuid not null default gen_random_uuid(),
@@ -225,15 +241,19 @@ alter table public.predication_likes
     on delete cascade;
 
 do $$
+declare
+  target_table text;
 begin
-  if not exists (
-    select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime'
-      and schemaname = 'public'
-      and tablename = 'user_profil'
-  ) then
-    alter publication supabase_realtime add table public.user_profil;
-  end if;
+  foreach target_table in array array['user_profil', 'categorie_predication', 'predication', 'notification'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = target_table
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', target_table);
+    end if;
+  end loop;
 end;
 $$;
 

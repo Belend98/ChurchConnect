@@ -140,8 +140,8 @@ export class GroupeService {
 
     if (currentUserId !== membership.userId) {
       await this.ensureCurrentUserCanManageGroup(membership.groupeId)
+      await this.ensureMemberCanBeManaged(membership.groupeId, membership.userId)
     }
-    await this.ensureMemberCanBeManaged(membership.groupeId, membership.userId)
 
     return this.groupeMembreRepository.delete(id)
   }
@@ -151,8 +151,8 @@ export class GroupeService {
 
     if (currentUserId !== userId) {
       await this.ensureCurrentUserCanManageGroup(groupeId)
+      await this.ensureMemberCanBeManaged(groupeId, userId)
     }
-    await this.ensureMemberCanBeManaged(groupeId, userId)
 
     return this.groupeMembreRepository.deleteByGroupeAndUser(groupeId, userId)
   }

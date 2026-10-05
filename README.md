@@ -85,20 +85,39 @@ depuis le SQL Editor Supabase :
 
 | Ordre | Fichier dans `supabase/migrations` | Contenu |
 | --- | --- | --- |
-| 1 | `20260904090000_create_core_tables.sql` | Création des dix tables, clés étrangères, suppressions `CASCADE` / `SET NULL` et publication realtime du profil. |
-| 2 | `20260915100000_transactions.sql` | Fonctions et RPC, changement des rôles, trigger de protection des profils, révocation des sessions et détachement de la propriété Storage. |
-| 3 | `20260916100000_policies_by_table.sql` | Activation RLS et policies des tables et du Storage, dont le contrôle des sessions actives. |
+| 1 | `20260904090000_create_core_tables.sql` | Création des dix tables, clés étrangères, cascades, statut d’accès et publication realtime du profil. |
+| 2 | `20260915100000_transactions.sql` | Fonctions et RPC, décision d’accès, changement des rôles, protection des profils, sessions et propriété Storage. |
+| 3 | `20260916100000_policies_by_table.sql` | Activation RLS et policies des tables et du Storage, dont le contrôle des sessions actives et du statut d’accès. |
 
 Chaque fichier est encadré par `BEGIN` / `COMMIT` : une erreur annule les
 changements du fichier concerné. Les fonctions sont créées avant les policies
 qui les utilisent.
 
 Ces fichiers consolident les anciennes migrations. La base existante possède
-déjà les corrections ; cette réorganisation ne nécessite pas de les réappliquer.
+déjà les corrections précédentes. L’ajout de la validation des inscriptions exige toutefois l’ajout du champ, puis l’application des transactions et des RLS.
 Sur un projet déjà migré, ne pas lancer directement `supabase db push` avec ces
 fichiers sans avoir aligné l’historique des migrations Supabase.
 
+La migration de création supprime également l’ancienne colonne `annonce.image_url`
+et ses URL d’images. La migration des transactions supprime l’ancien indicateur
+`user_profil.is_admin` au profit de `role_app` et permet au pasteur et aux
+administrateurs d’accepter une inscription précédemment refusée.
+Dans l’écran Demandes, le filtre Refusés propose l’acceptation et la suppression
+du compte après confirmation. La suppression utilise la fonction `delete-account`
+et conserve les restrictions de rôle existantes.
+
 ### 6. Règles RLS et permissions
+
+La gestion des catégories permet la recherche par nom, le renommage et la suppression.
+Les noms sont uniques sans distinction de casse, d’espaces au début ou à la fin,
+ni d’espaces successifs. Cette règle est contrôlée par le service et par l’index
+`categorie_predication_name_unique` du fichier de création des tables.
+La suppression conserve les prédications et remet leur catégorie à `NULL`.
+Les catégories et les prédications sont synchronisées avec Realtime et TanStack Query.
+Sur une base existante, appliquer l’index unique, le remplacement de la clé étrangère
+`predication_categorie_fkey` avec `ON DELETE SET NULL`, et l’ajout des tables à la
+publication Realtime depuis ce fichier. Les éventuels doublons existants doivent
+être renommés avant la création de l’index unique.
 
 Le fichier des tables intègre les cascades : supprimer un groupe retire ses
 membres et messages ; supprimer une prédication retire ses favoris et likes.
@@ -117,11 +136,26 @@ apparent sans ligne supprimée.
 
 Dans le rouage d’un groupe, le créateur et les administrateurs du groupe peuvent
 attribuer le rôle membre ou administrateur et retirer les autres membres, avec
-confirmation. Le pasteur est automatiquement administrateur de chaque groupe :
-son rôle est permanent et il ne peut pas être retiré ni quitter le groupe.
-Le créateur conserve également ses droits de gestion. Ces protections sont
+confirmation. Le pasteur est automatiquement administrateur de chaque nouveau groupe.
+Le pasteur et le créateur ne peuvent pas être retirés ni rétrogradés par les autres
+membres, mais peuvent quitter volontairement le groupe après confirmation.
+Après un départ ou un retrait, le trigger `delete_empty_group` supprime le groupe
+et ses messages s’il n’a plus de membres, ou s’il ne reste que le pasteur sans
+qu’il en soit le créateur. Le pasteur peut rester seul dans un groupe qu’il a créé ;
+son départ supprime alors le groupe. Un groupe reste conservé si au moins un membre
+autre que le pasteur y participe.
+Les modifications d’adhésion sont sérialisées par groupe pour gérer les départs
+simultanés. « Quitter le groupe » est disponible
+pour tous les membres ; « Supprimer le groupe » reste une action distincte.
+Une mise à jour du profil sans changement de rôle ne réinscrit pas le pasteur.
+Ces protections sont
 appliquées dans les services de l’application et par des triggers SQL, y compris
 pour les groupes existants. Supprimer un groupe continue à supprimer ses adhésions.
+Sur une base existante, remplacer les fonctions `protect_group_membership()` et
+`sync_pastor_group_memberships()` par leurs définitions du fichier des transactions
+pour autoriser le départ volontaire du pasteur et du créateur.
+Appliquer également la fonction `delete_empty_group()` et son trigger du même fichier
+pour activer cette règle de suppression automatique.
 
 ### Suppression des comptes
 
@@ -275,6 +309,7 @@ L'écran d'accueil présente les contenus principaux de l'application, notamment
 ### Annonces
 
 Les annonces permettent de diffuser des informations importantes aux utilisateurs.
+Elles contiennent un titre et un texte, sans image.
 
 Selon les permissions configurées, seuls certains rôles peuvent créer, modifier ou supprimer des annonces.
 
@@ -294,6 +329,12 @@ Les membres peuvent consulter les informations du groupe et participer aux écha
 
 Le créateur ou les administrateurs d'un groupe peuvent gérer certains paramètres et membres du groupe.
 
+En cas d'erreur réseau pendant l'envoi d'un message, le texte reste dans le champ
+et une erreur en français invite à réessayer. Une nouvelle tentative du même
+texte conserve son identifiant tant que l'écran reste ouvert : si le serveur
+avait déjà enregistré le message, le dépôt le retrouve sans créer de doublon
+ni déclencher une seconde notification.
+
 ### Notifications
 
 L'application dispose d'un système de notifications internes.
@@ -304,9 +345,37 @@ Les notifications peuvent être générées lors de certains événements, comme
 - l'envoi d'un message dans un groupe ;
 - l'ajout ou l'invitation d'un utilisateur dans un groupe.
 
+Le trigger `notify_group_message` crée une notification interne pour chaque autre
+membre accepté du groupe lors d'un nouveau message. L'auteur ne reçoit pas sa
+propre notification. La création est atomique avec le message et le cache
+TanStack existant reçoit les changements via Realtime, sans requêtes périodiques.
+Pour une base déjà déployée, appliquer le bloc `notify_group_message` à la fin de
+`20260915100000_transactions.sql` et ajouter `public.notification` à la publication
+`supabase_realtime` si la table n'y figure pas déjà. Modifier un ancien fichier de
+migration ne met pas automatiquement à jour la base distante.
+
 ### Mon espace
 
 L'écran personnel de l'utilisateur permet de consulter son profil, ses statistiques, ses groupes, ses favoris et les accès rapides vers les principales fonctionnalités.
+
+### Validation des inscriptions
+
+Le profil contient un seul champ `statut_acces` : `en_attente`, `accepte` ou `refuse`.
+Les profils existants restent acceptés lors de l’ajout du champ ; les nouveaux profils sont en attente.
+L’inscription demande un nom affiché pour identifier la demande. Le profil en attente est créé dès la connexion, sans accès aux écrans de l’application.
+
+Les comptes en attente ou refusés voient uniquement une alerte, avec actualisation et déconnexion.
+L’onglet « Demandes », réservé au pasteur et aux administrateurs, affiche le nombre de demandes et permet de les accepter ou refuser.
+La décision est suivie par TanStack Query et Realtime. Après acceptation, l’utilisateur complète son profil.
+
+La RPC `decide_account_access(uuid, boolean)` permet d’accepter ou de refuser les demandes en attente, ainsi que d’accepter les inscriptions précédemment refusées.
+Un contrôle interne `has_approved_app_access()` permet aux RLS de vérifier le statut sans récursion sur les profils.
+Les comptes non acceptés peuvent lire leur propre statut, mais ne peuvent consulter les données privées ni modifier leur statut ou rôle.
+Aucun retrait d’accès ni révocation supplémentaire n’est ajouté à ce parcours.
+
+Sur une base existante, appliquer dans cet ordre l’ajout de `statut_acces` du fichier de création, puis les transactions et les RLS, avant de déployer l’application.
+Le premier compte pasteur doit recevoir son rôle et le statut `accepte` par le développeur dans Supabase ; l’application ne permet pas de s’attribuer ces droits.
+La confirmation d’adresse email peut rester désactivée dans Supabase Auth.
 
 ## Rôles et permissions
 

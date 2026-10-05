@@ -23,11 +23,12 @@ function getEmailRedirectTo() {
 }
 
 export class SupabaseAuthRepository implements AuthRepository {
-  async signUp(email: string, password: string): Promise<AuthResult> {
+  async signUp(email: string, password: string, nom?: string, prenom?: string): Promise<AuthResult> {
     const { data, error } = await supabase.auth.signUp({
       email,
       options: {
         emailRedirectTo: getEmailRedirectTo(),
+        data: { nom, prenom },
       },
       password,
     })

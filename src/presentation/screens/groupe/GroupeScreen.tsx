@@ -1,12 +1,21 @@
 import type { GroupeModel } from '@/domain/entités/Groupe'
+import { ListCount } from '@/presentation/component/ListCount'
 import { useGroupes } from '@/presentation/hooks/groupe/useGroupes'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { router } from 'expo-router'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+
+function normalizeGroupSearch(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
 
 export default function GroupeScreen() {
   const { data: groups = [], isPending, isError, error, refetch } = useGroupes()
+  const [search, setSearch] = useState('')
+  const normalizedSearch = normalizeGroupSearch(search.trim())
+  const visibleGroups = groups.filter((group) => normalizeGroupSearch(group.name).includes(normalizedSearch))
 
   function openCreateGroupe() {
     router.push('/create-groupe' as never)
@@ -28,20 +37,42 @@ export default function GroupeScreen() {
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View>
+          <View style={styles.titleRow}>
             <Text style={styles.title}>Mes groupes</Text>
+            {!isPending && !isError ? <ListCount count={visibleGroups.length} label="groupes affichés" /> : null}
           </View>
           <Pressable onPress={openCreateGroupe} style={styles.headerButton}>
             <Text style={styles.headerButtonText}>Créer</Text>
           </Pressable>
         </View>
 
-        {groups.length > 0 ? (
+        <View style={styles.searchBox}>
+          <TextInput
+            accessibilityLabel="Rechercher un groupe par nom"
+            autoCapitalize="none"
+            autoCorrect={false}
+            onChangeText={setSearch}
+            placeholder="Nom du groupe"
+            placeholderTextColor={colors.onSurfaceVariant}
+            returnKeyType="search"
+            style={styles.searchInput}
+            value={search}
+          />
+          {search ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Effacer la recherche" onPress={() => setSearch('')} style={styles.clearSearch}>
+              <Text style={styles.clearSearchText}>×</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {visibleGroups.length > 0 ? (
           <View style={styles.groupList}>
-          {groups.map((group) => (
+          {visibleGroups.map((group) => (
             <Pressable
               key={group.id}
               onPress={() => openGroupe(group)}
@@ -63,13 +94,12 @@ export default function GroupeScreen() {
                   </Text>
                 </View>
 
-                <Text numberOfLines={1} style={styles.lastMessage}>
-                  {group.description ?? 'Aucune description.'}
-                </Text>
+                {group.description?.trim() ? (
+                  <Text numberOfLines={1} style={styles.lastMessage}>
+                    {group.description}
+                  </Text>
+                ) : null}
 
-                <Text style={styles.groupMeta}>
-                  {group.createdBy ? 'Groupe actif' : 'Groupe'}
-                </Text>
               </View>
               <Text style={styles.groupArrow}>›</Text>
             </Pressable>
@@ -100,6 +130,10 @@ export default function GroupeScreen() {
           </View>
         ) : null}
 
+        {!isPending && !isError && groups.length > 0 && visibleGroups.length === 0 ? (
+          <Text style={styles.emptyText}>Aucun groupe ne correspond à votre recherche.</Text>
+        ) : null}
+
       </ScrollView>
     </View>
   )
@@ -121,6 +155,7 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: 12,
     justifyContent: 'space-between',
     paddingTop: 8,
   },
@@ -132,6 +167,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
+    flexShrink: 1,
     color: colors.primary,
     fontSize: 28,
     fontWeight: '800',
@@ -157,6 +193,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
     padding: 10,
+  },
+  searchBox: {
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 8,
+    flexDirection: 'row',
+    minHeight: 44,
+  },
+  searchInput: {
+    color: colors.onSurface,
+    flex: 1,
+    fontSize: 14,
+    minHeight: 44,
+    minWidth: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  clearSearch: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    width: 44,
+  },
+  clearSearchText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 24,
+  },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flex: 1,
+    gap: 8,
   },
   groupRow: {
     alignItems: 'center',

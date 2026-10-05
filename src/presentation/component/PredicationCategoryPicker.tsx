@@ -1,8 +1,9 @@
 import { categorieService } from '@/composition/categorie'
 import type { CategorieModel } from '@/domain/entités/Categorie'
+import { normalizeCategorieName } from '@/domain/rules/categorieRules'
 import { CATEGORIES_QUERY_KEY } from '@/presentation/queries/categorieQueries'
 import { colors } from '@/shared/theme/colors'
-import { toErrorMessage } from '@/shared/utils/errors'
+import { toCategorieErrorMessage } from '@/shared/utils/categorieErrors'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import {
@@ -53,6 +54,7 @@ export function PredicationCategoryPicker({
     (value ? 'Catégorie sélectionnée' : 'Choisir une catégorie')
 
   async function createCategory() {
+    if (createCategoryMutation.isPending) return
     const nom = newCategoryName.trim()
 
     if (!nom) {
@@ -62,13 +64,18 @@ export function PredicationCategoryPicker({
 
     setLocalError(null)
 
+    if (categories.some((categorie) => normalizeCategorieName(categorie.nom) === normalizeCategorieName(nom))) {
+      setLocalError('Une catégorie porte déjà ce nom.')
+      return
+    }
+
     try {
       const categorie = await createCategoryMutation.mutateAsync(nom)
       onChange(categorie.id)
       setNewCategoryName('')
       setIsOpen(false)
     } catch (createError) {
-      setLocalError(toErrorMessage(createError))
+      setLocalError(toCategorieErrorMessage(createError))
     }
   }
 
@@ -148,7 +155,10 @@ export function PredicationCategoryPicker({
 
             <View style={styles.createBox}>
               <TextInput
-                onChangeText={setNewCategoryName}
+                onChangeText={(name) => {
+                  setNewCategoryName(name)
+                  setLocalError(null)
+                }}
                 placeholder="Nouvelle catégorie"
                 placeholderTextColor={colors.outline}
                 style={styles.input}
@@ -169,7 +179,7 @@ export function PredicationCategoryPicker({
             </View>
 
             {localError && isOpen ? (
-              <Text style={styles.errorText}>{localError}</Text>
+              <Text accessibilityRole="alert" style={styles.errorText}>{localError}</Text>
             ) : null}
           </View>
         </View>

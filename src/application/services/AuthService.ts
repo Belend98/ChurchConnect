@@ -3,8 +3,8 @@ import type { AuthRepository } from "@/domain/repositories/AuthRepository"
 export class AuthService {
   constructor(private readonly authRepository: AuthRepository) {}
 
-  signUp(email: string, password: string) {
-    return this.authRepository.signUp(email, password)
+  signUp(email: string, password: string, nom?: string, prenom?: string) {
+    return this.authRepository.signUp(email, password, nom, prenom)
   }
 
   signIn(email: string, password: string) {

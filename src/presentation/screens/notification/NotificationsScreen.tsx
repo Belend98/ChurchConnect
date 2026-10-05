@@ -1,7 +1,9 @@
 import { notificationService } from '@/composition/notification'
+import { groupeService } from '@/composition/groupe'
 import type { NotificationModel } from '@/domain/entités/Notification'
 import { useNotifications } from '@/presentation/hooks/notification/useNotifications'
-import { applyNotificationChange } from '@/presentation/queries/notificationQueries'
+import { applyNotificationChange, notificationsQueryKey } from '@/presentation/queries/notificationQueries'
+import { groupeKeys, removeCachedGroupe } from '@/presentation/queries/groupeQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -9,6 +11,8 @@ import { router } from 'expo-router'
 import { useState } from 'react'
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -67,7 +71,44 @@ export default function NotificationsScreen() {
     },
   })
   const isMarkingAllAsRead = markAllMutation.isPending
-  const isBusy = markReadMutation.isPending || deleteMutation.isPending || isMarkingAllAsRead
+  const deleteAllMutation = useMutation({
+    mutationFn: () => notificationService.deleteAllMyNotifications(),
+    onMutate: () => ({ userId }),
+    onSuccess: (_result, _variables, context) => {
+      if (userId && context?.userId === userId) {
+        // Recharger conserve les nouvelles notifications arrivées pendant la suppression.
+        return queryClient.invalidateQueries({ queryKey: notificationsQueryKey(userId), exact: true })
+      }
+    },
+  })
+  const isDeletingAll = deleteAllMutation.isPending
+  const checkGroupMutation = useMutation({
+    mutationFn: (id: string) => groupeService.getGroupe(id),
+  })
+  const isBusy = markReadMutation.isPending || deleteMutation.isPending || isMarkingAllAsRead || isDeletingAll || checkGroupMutation.isPending
+
+  async function deleteAllNotifications() {
+    if (isBusy || !userId || notifications.length === 0) return
+    setError(null)
+    try {
+      await deleteAllMutation.mutateAsync()
+    } catch (deleteError) {
+      setError(toErrorMessage(deleteError, 'Impossible de supprimer les notifications.'))
+    }
+  }
+
+  function confirmDeleteAllNotifications() {
+    if (isBusy || !userId || notifications.length === 0) return
+    const message = 'Supprimer toutes vos notifications ?'
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) void deleteAllNotifications()
+      return
+    }
+    Alert.alert('Tout supprimer', message, [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Tout supprimer', style: 'destructive', onPress: () => void deleteAllNotifications() },
+    ])
+  }
 
   async function deleteNotification(id: string) {
     setError(null)
@@ -92,6 +133,7 @@ export default function NotificationsScreen() {
   }
 
   async function openNotification(notification: NotificationModel) {
+    if (isBusy || !userId) return
     setError(null)
     if (!notification.isRead) {
       try {
@@ -103,17 +145,28 @@ export default function NotificationsScreen() {
     }
 
     if (
-      notification.referenceId &&
-      (notification.type === 'message_groupe' ||
-        notification.type === 'groupe_invitation')
+      notification.type === 'message_groupe' ||
+      notification.type === 'groupe_invitation'
     ) {
-      router.push({
-        pathname: '/groupe-detail',
-        params: {
-          id: notification.referenceId,
-          name: notification.titre,
-        },
-      } as never)
+      if (!notification.referenceId) {
+        setError('Ce groupe n’est plus accessible : il a été supprimé ou votre accès a été retiré.')
+        return
+      }
+      try {
+        const groupe = await checkGroupMutation.mutateAsync(notification.referenceId)
+        if (!groupe) {
+          removeCachedGroupe(queryClient, userId, notification.referenceId)
+          setError('Ce groupe n’est plus accessible : il a été supprimé ou votre accès a été retiré.')
+          return
+        }
+        queryClient.setQueryData(groupeKeys.detail(userId, groupe.id), groupe)
+        router.push({
+          pathname: '/groupe-detail',
+          params: { id: groupe.id, name: groupe.name },
+        } as never)
+      } catch (groupError) {
+        setError(toErrorMessage(groupError, 'Impossible de vérifier l’accès au groupe.'))
+      }
       return
     }
 
@@ -129,11 +182,15 @@ export default function NotificationsScreen() {
           <Text style={styles.backButtonText}>‹</Text>
         </Pressable>
 
-        <View>
+        <View style={styles.headerTitle}>
           <Text style={styles.title}>Notifications</Text>
         </View>
+        <View style={styles.headerSpacer} />
+      </View>
 
+      <View style={styles.bulkActions}>
         <Pressable
+          accessibilityRole="button"
           disabled={isBusy || unreadCount === 0}
           onPress={markAllAsRead}
           style={[
@@ -144,6 +201,19 @@ export default function NotificationsScreen() {
         >
           <Text style={styles.markAllButtonText}>
             {isMarkingAllAsRead ? 'Lecture...' : 'Tout lire'}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          disabled={isBusy || isLoading || isError || !userId || notifications.length === 0}
+          onPress={confirmDeleteAllNotifications}
+          style={[
+            styles.deleteAllButton,
+            (isBusy || isLoading || isError || !userId || notifications.length === 0) && styles.disabledButton,
+          ]}
+        >
+          <Text style={styles.deleteAllButtonText}>
+            {isDeletingAll ? 'Suppression...' : 'Tout supprimer'}
           </Text>
         </Pressable>
       </View>
@@ -209,7 +279,7 @@ export default function NotificationsScreen() {
           </View>
         ))}
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? <Text accessibilityRole="alert" style={styles.errorText}>{error}</Text> : null}
         {isError ? (
           <View>
             <Text style={styles.errorText}>
@@ -269,6 +339,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 42,
     paddingHorizontal: 14,
+  },
+  headerTitle: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerSpacer: {
+    width: 28,
+  },
+  bulkActions: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'flex-end',
+    maxWidth: 520,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    width: '100%',
+  },
+  deleteAllButton: {
+    alignItems: 'center',
+    borderColor: colors.error,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 14,
+  },
+  deleteAllButtonText: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: '900',
   },
   markAllButtonText: {
     color: '#ffffff',

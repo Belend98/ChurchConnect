@@ -1,6 +1,6 @@
 import { supabase } from '@/infrastructure/supabase/client'
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
-import { communityMembersQueryKey } from '@/presentation/queries/profilQueries'
+import { accessRequestsQueryKey, communityMembersQueryKey, rejectedMembersQueryKey } from '@/presentation/queries/profilQueries'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
@@ -13,7 +13,10 @@ export function useCommunityMembersRealtime() {
     let active = true
     const queryKey = communityMembersQueryKey(userId)
     const refresh = () => {
-      if (active) void queryClient.invalidateQueries({ queryKey, exact: true })
+      if (!active) return
+      void queryClient.invalidateQueries({ queryKey, exact: true })
+      void queryClient.invalidateQueries({ queryKey: accessRequestsQueryKey(userId), exact: true })
+      void queryClient.invalidateQueries({ queryKey: rejectedMembersQueryKey(userId), exact: true })
     }
     const channel = supabase
       .channel(`community-members-${userId}`)

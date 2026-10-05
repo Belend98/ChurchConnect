@@ -8,6 +8,12 @@ export const currentProfileQueryKey = (userId: string | null) =>
 export const communityMembersQueryKey = (userId: string | null) =>
   ['community-members', userId] as const
 
+export const accessRequestsQueryKey = (userId: string | null) =>
+  ['access-requests', userId] as const
+
+export const rejectedMembersQueryKey = (userId: string | null) =>
+  ['rejected-members', userId] as const
+
 export async function cacheCommunityMemberRole(
   queryClient: QueryClient,
   userId: string | null,
@@ -17,7 +23,7 @@ export async function cacheCommunityMemberRole(
   const queryKey = communityMembersQueryKey(userId)
   await queryClient.cancelQueries({ queryKey, exact: true })
   queryClient.setQueryData<ProfilModel[]>(queryKey, (members) => members?.map((member) =>
-    member.id === memberId ? { ...member, roleApp: role, isAdmin: role === 'admin' } : member,
+    member.id === memberId ? { ...member, roleApp: role } : member,
   ))
 }
 

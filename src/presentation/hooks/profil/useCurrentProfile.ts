@@ -10,7 +10,11 @@ export function useCurrentProfile() {
     queryKey: currentProfileQueryKey(userId),
     queryFn: () => {
       if (!userId) throw new Error('Session invalide.')
-      return profilService.getMyProfile(userId)
+      return profilService.getMyProfile(
+        userId,
+        session?.user.user_metadata?.nom || session?.user.user_metadata?.display_name || session?.user.email?.split('@')[0],
+        session?.user.user_metadata?.prenom,
+      )
     },
     enabled: Boolean(userId),
     staleTime: Infinity,

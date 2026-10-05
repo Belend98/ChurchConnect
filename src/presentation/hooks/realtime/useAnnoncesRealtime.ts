@@ -36,7 +36,6 @@ export function useAnnoncesRealtime() {
       })
       .subscribe((status) => {
         if (active && status === 'SUBSCRIBED') {
-          // Reconcile changes missed before subscribing or while disconnected.
           void queryClient.invalidateQueries({ queryKey, exact: true })
         }
       })

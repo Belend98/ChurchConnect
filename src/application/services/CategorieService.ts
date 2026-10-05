@@ -3,14 +3,14 @@ import type {
   CreateCategorieModel,
 } from '@/domain/entités/Categorie'
 import type { CategorieRepository } from '@/domain/repositories/CategorieRepository'
+import { cleanCategorieName, normalizeCategorieName } from '@/domain/rules/categorieRules'
 
 export class CategorieService {
   constructor(private readonly categorieRepository: CategorieRepository) {}
 
-  createCategorie(data: CreateCategorieModel): Promise<CategorieModel> {
-    return this.categorieRepository.create({
-      nom: data.nom.trim(),
-    })
+  async createCategorie(data: CreateCategorieModel): Promise<CategorieModel> {
+    const nom = await this.validateName(data.nom)
+    return this.categorieRepository.create({ nom })
   }
 
   deleteCategorie(id: string): Promise<void> {
@@ -21,12 +21,21 @@ export class CategorieService {
     return this.categorieRepository.list()
   }
 
-  updateCategorie(
+  async updateCategorie(
     id: string,
     data: CreateCategorieModel,
   ): Promise<CategorieModel> {
-    return this.categorieRepository.update(id, {
-      nom: data.nom.trim(),
-    })
+    const nom = await this.validateName(data.nom, id)
+    return this.categorieRepository.update(id, { nom })
+  }
+
+  private async validateName(name: string, excludedId?: string): Promise<string> {
+    const nom = cleanCategorieName(name)
+    const categories = await this.categorieRepository.list()
+    if (categories.some((categorie) => categorie.id !== excludedId &&
+      normalizeCategorieName(categorie.nom) === normalizeCategorieName(nom))) {
+      throw new Error('Une catégorie porte déjà ce nom.')
+    }
+    return nom
   }
 }

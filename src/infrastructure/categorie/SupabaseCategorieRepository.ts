@@ -29,6 +29,7 @@ export class SupabaseCategorieRepository implements CategorieRepository {
       .select(CATEGORIE_SELECT)
       .single()
 
+    if (error?.code === '23505') throw new Error('Une catégorie porte déjà ce nom.')
     if (error) throw error
 
     return mapCategorie(categorie as CategorieRow)
@@ -67,6 +68,7 @@ export class SupabaseCategorieRepository implements CategorieRepository {
       .select(CATEGORIE_SELECT)
       .single()
 
+    if (error?.code === '23505') throw new Error('Une catégorie porte déjà ce nom.')
     if (error) throw error
 
     return mapCategorie(categorie as CategorieRow)

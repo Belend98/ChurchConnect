@@ -38,7 +38,7 @@ export function MemberRoleButton({ member, memberName }: Props) {
       const cached = queryClient.getQueryData<ProfilModel | null>(currentProfileQueryKey(member.id))
       if (cached) {
         await cacheCurrentProfile(queryClient, member.id, {
-          ...cached, roleApp: role, isAdmin: role === 'admin',
+          ...cached, roleApp: role,
         })
       }
       void queryClient.invalidateQueries({ queryKey: currentProfileQueryKey(member.id), exact: true })

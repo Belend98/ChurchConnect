@@ -2,6 +2,7 @@ import type { AuthService } from '@/application/services/AuthService'
 import type {
   AnnonceModel,
   CreateAnnonceModel,
+  UpdateAnnonceModel,
 } from '@/domain/entités/Annonce'
 import { canManagePredications } from '@/domain/entités/Profil'
 import type { AnnonceRepository } from '@/domain/repositories/AnnonceRepository'
@@ -17,13 +18,7 @@ export class AnnonceService {
   async createAnnonce(
     data: Omit<CreateAnnonceModel, 'createdBy'>,
   ): Promise<AnnonceModel> {
-    const userId = await this.authService.getCurrentUserIdOrThrow()
-    const profile = await this.profilRepository.getProfile(userId)
-
-    if (!profile) throw new Error('Profil introuvable.')
-    if (!canManagePredications(profile.roleApp)) {
-      throw new Error('Seuls les pasteurs et administrateurs peuvent créer une annonce.')
-    }
+    const userId = await this.requireManager()
 
     return this.annonceRepository.create({
       ...data,
@@ -33,5 +28,29 @@ export class AnnonceService {
 
   listAnnonces(): Promise<AnnonceModel[]> {
     return this.annonceRepository.list()
+  }
+
+  getAnnonce(id: string): Promise<AnnonceModel | null> {
+    return this.annonceRepository.getById(id)
+  }
+
+  async updateAnnonce(id: string, data: UpdateAnnonceModel): Promise<AnnonceModel> {
+    await this.requireManager()
+    return this.annonceRepository.update(id, data)
+  }
+
+  async deleteAnnonce(id: string): Promise<void> {
+    await this.requireManager()
+    await this.annonceRepository.delete(id)
+  }
+
+  private async requireManager(): Promise<string> {
+    const userId = await this.authService.getCurrentUserIdOrThrow()
+    const profile = await this.profilRepository.getProfile(userId)
+    if (!profile) throw new Error('Profil introuvable.')
+    if (profile.statutAcces !== 'accepte' || !canManagePredications(profile.roleApp)) {
+      throw new Error('Seuls les pasteurs et administrateurs peuvent gérer les annonces.')
+    }
+    return userId
   }
 }

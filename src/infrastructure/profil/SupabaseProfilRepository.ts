@@ -18,11 +18,11 @@ export type ProfilRow = {
   date_naissance: string | null
   created_at: string
   role_app: string | null
-  is_admin: boolean | null
+  statut_acces: 'en_attente' | 'accepte' | 'refuse'
 }
 
 const PROFIL_SELECT =
-  'id, username, nom, prenom, bio, image_url, date_naissance, created_at, role_app, is_admin'
+  'id, username, nom, prenom, bio, image_url, date_naissance, created_at, role_app, statut_acces'
 
 function toAppRole(role: string | null): AppRole {
   if (APP_ROLES.includes(role as AppRole)) return role as AppRole
@@ -44,7 +44,7 @@ export function mapProfil(data: ProfilRow): ProfilModel {
       ? new Date(data.date_naissance)
       : undefined,
     roleApp,
-    isAdmin: roleApp === 'admin' || roleApp === 'pasteur' || Boolean(data.is_admin),
+    statutAcces: data.statut_acces === 'accepte' || data.statut_acces === 'refuse' ? data.statut_acces : 'en_attente',
     createdAt: new Date(data.created_at),
   }
 }
@@ -61,7 +61,6 @@ export class SupabaseProfilRepository implements ProfilRepository {
         image_url: data.imageUrl ?? null,
         date_naissance: data.dateNaissance?.toISOString() ?? null,
         ...(data.roleApp !== undefined ? { role_app: data.roleApp } : {}),
-        ...(data.isAdmin !== undefined ? { is_admin: data.isAdmin } : {}),
       },
       {
         onConflict: 'id',
@@ -102,6 +101,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
     let query = supabase
       .from('user_profil')
       .select(PROFIL_SELECT)
+      .eq('statut_acces', 'accepte')
       .order('created_at', { ascending: false })
 
     if (limit !== undefined) {
@@ -113,6 +113,43 @@ export class SupabaseProfilRepository implements ProfilRepository {
     if (error) throw error
 
     return ((data ?? []) as ProfilRow[]).map(mapProfil)
+  }
+
+  async ensurePendingProfile(userId: string, nom: string, prenom?: string): Promise<ProfilModel> {
+    const { error } = await supabase.from('user_profil').upsert(
+      { id: userId, nom, prenom: prenom ?? null },
+      { onConflict: 'id', ignoreDuplicates: true },
+    )
+    if (error) throw error
+    const profile = await this.getProfile(userId)
+    if (!profile) throw new Error('Impossible de créer la demande d’accès.')
+    return profile
+  }
+
+  async listAccessRequests(): Promise<ProfilModel[]> {
+    const { data, error } = await supabase.from('user_profil')
+      .select(PROFIL_SELECT)
+      .eq('statut_acces', 'en_attente')
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return ((data ?? []) as ProfilRow[]).map(mapProfil)
+  }
+
+  async listRejectedMembers(): Promise<ProfilModel[]> {
+    const { data, error } = await supabase.from('user_profil')
+      .select(PROFIL_SELECT)
+      .eq('statut_acces', 'refuse')
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    return ((data ?? []) as ProfilRow[]).map(mapProfil)
+  }
+
+  async decideAccess(userId: string, accepted: boolean): Promise<void> {
+    const { error } = await supabase.rpc('decide_account_access', {
+      target_user_id: userId,
+      accepted,
+    })
+    if (error) throw error
   }
 
   async listByIds(ids: string[]): Promise<ProfilModel[]> {
@@ -140,7 +177,6 @@ export class SupabaseProfilRepository implements ProfilRepository {
         image_url: data.imageUrl ?? null,
         date_naissance: data.dateNaissance?.toISOString() ?? null,
         ...(data.roleApp !== undefined ? { role_app: data.roleApp } : {}),
-        ...(data.isAdmin !== undefined ? { is_admin: data.isAdmin } : {}),
       })
       .eq('id', userId)
       .select(PROFIL_SELECT)

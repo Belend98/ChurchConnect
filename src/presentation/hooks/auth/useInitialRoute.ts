@@ -6,10 +6,10 @@ export function useInitialRoute() {
   const { data: profile, userId, isSessionLoading, isPending, isError } = useCurrentProfile()
   useEffect(() => {
     if (isSessionLoading || (userId && isPending)) return
-    if (!userId || isError) {
+    if (!userId) {
       router.replace('/(auth)/signup')
     } else {
-      router.replace(profile ? '/(tabs)/home' : '/(auth)/profil')
+      router.replace(isError || profile?.statutAcces !== 'accepte' ? '/account-access' : profile.username ? '/(tabs)/home' : '/(auth)/profil')
     }
   }, [profile, userId, isSessionLoading, isPending, isError])
 }

@@ -11,26 +11,26 @@ create policy "user_profil_select_authenticated"
 on public.user_profil
 for select
 to authenticated
-using (true);
+using (id = auth.uid() or (public.has_approved_app_access() and (statut_acces = 'accepte' or public.is_app_admin())));
 
 create policy "user_profil_insert_own"
 on public.user_profil
 for insert
 to authenticated
-with check (id = auth.uid());
+with check (id = auth.uid() and statut_acces = 'en_attente');
 
 create policy "user_profil_update_own"
 on public.user_profil
 for update
 to authenticated
-using (id = auth.uid())
-with check (id = auth.uid());
+using (id = auth.uid() and public.has_approved_app_access())
+with check (id = auth.uid() and public.has_approved_app_access());
 
 create policy "user_profil_delete_own"
 on public.user_profil
 for delete
 to authenticated
-using (id = auth.uid());
+using (id = auth.uid() and public.has_approved_app_access());
 
 alter table public.categorie_predication enable row level security;
 
@@ -481,5 +481,28 @@ create policy require_active_account_session on storage.objects
 as restrictive for all to authenticated
 using ((select public.is_active_account_session()))
 with check ((select public.is_active_account_session()));
+
+do $$
+declare
+  target_table text;
+begin
+  foreach target_table in array array[
+    'categorie_predication', 'predication', 'predication_favorites', 'predication_likes',
+    'groupe', 'groupe_membre', 'annonce', 'message_groupe', 'notification'
+  ] loop
+    execute format('drop policy if exists require_approved_app_access on public.%I', target_table);
+    execute format(
+      'create policy require_approved_app_access on public.%I as restrictive for all to authenticated using ((select public.has_approved_app_access())) with check ((select public.has_approved_app_access()))',
+      target_table
+    );
+  end loop;
+end;
+$$;
+
+drop policy if exists require_approved_app_access on storage.objects;
+create policy require_approved_app_access on storage.objects
+as restrictive for all to authenticated
+using ((select public.has_approved_app_access()))
+with check ((select public.has_approved_app_access()));
 
 commit;

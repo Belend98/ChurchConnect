@@ -28,7 +28,6 @@ export function usePredicationFavoritesRealtime() {
         event: 'DELETE', schema: 'public', table: 'predication_favorites',
       }, (payload) => {
         if (!active) return
-        // DELETE cannot be filtered and may only contain the primary key with RLS.
         if (payload.old.user_id && payload.old.user_id !== userId) return
         void queryClient.invalidateQueries({ queryKey })
       })

@@ -12,6 +12,8 @@ const SignUpScreen = () => {
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
+      nom: '',
+      prenom: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -23,10 +25,9 @@ const SignUpScreen = () => {
   const onSubmit = async (data: SignUpInput) => {
     setErrorText(null)
     try {
-      const result = await authService.signUp(data.email, data.password)
+      const result = await authService.signUp(data.email, data.password, data.nom, data.prenom)
       if (result.hasSession) {
-        Alert.alert('Compte crée', 'Inscription réussie.')
-        router.replace('/(auth)/profil')
+        router.replace('/')
         return
       }
       Alert.alert(
@@ -47,7 +48,29 @@ const SignUpScreen = () => {
       style={styles.screen}
     >
       <Text style={styles.title}>Créer un compte</Text>
-      <Text style={styles.subtitle}>Entre ton email et ton mot de passe.</Text>
+      <Text style={styles.subtitle}>Indique ton nom, ton prénom, ton email et ton mot de passe.</Text>
+
+      <Text style={styles.label}>Nom</Text>
+      <Controller
+        control={control}
+        name="nom"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextInput value={value} onChangeText={onChange} onBlur={onBlur}
+            autoCapitalize="words" placeholder="Entre ton nom" style={styles.input} />
+        )}
+      />
+      {errors.nom && <Text style={styles.errorText}>{errors.nom.message}</Text>}
+
+      <Text style={styles.label}>Prénom</Text>
+      <Controller
+        control={control}
+        name="prenom"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextInput value={value} onChangeText={onChange} onBlur={onBlur}
+            autoCapitalize="words" placeholder="Entre ton prénom" style={styles.input} />
+        )}
+      />
+      {errors.prenom && <Text style={styles.errorText}>{errors.prenom.message}</Text>}
 
       <Text style={styles.label}>Email</Text>
       <Controller

@@ -11,10 +11,12 @@ const baseSignSchema = z.object({
 export const signInSchema = baseSignSchema
 
 export const signUpSchema = baseSignSchema.extend({
+  nom: z.string().trim().min(2, 'Indique ton nom.').max(100, 'Le nom est trop long.'),
+  prenom: z.string().trim().min(2, 'Indique ton prénom.').max(100, 'Le prénom est trop long.'),
   confirmPassword: z
     .string(),
   rgpdConsent: z.boolean().refine((value) => value, {
-    message: 'Tu dois accepter le traitement de tes donnees personnelles.',
+    message: 'Tu dois accepter le traitement de tes données personnelles.',
   }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Les mots de passe ne correspondent pas',

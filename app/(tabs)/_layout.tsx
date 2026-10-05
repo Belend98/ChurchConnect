@@ -1,12 +1,13 @@
+import { useAccessRequests } from '@/presentation/hooks/profil/useAccessRequests'
 import { colors } from '@/shared/theme/colors'
 import { SymbolView } from 'expo-symbols'
 import { Tabs } from 'expo-router'
 import { type ColorValue, Platform, StyleSheet, View } from 'react-native'
 
 type TabIconName = {
-  android: 'home' | 'campaign' | 'groups' | 'person'
-  ios: 'house.fill' | 'megaphone.fill' | 'person.3.fill' | 'person.crop.circle.fill'
-  web: 'home' | 'campaign' | 'groups' | 'person'
+  android: 'home' | 'campaign' | 'groups' | 'person' | 'how_to_reg'
+  ios: 'house.fill' | 'megaphone.fill' | 'person.3.fill' | 'person.crop.circle.fill' | 'person.badge.plus'
+  web: 'home' | 'campaign' | 'groups' | 'person' | 'how_to_reg'
 }
 
 function TabIcon({
@@ -31,6 +32,7 @@ function TabIcon({
 }
 
 export default function TabLayout() {
+  const { canManage, data: requests = [] } = useAccessRequests()
   return (
     <Tabs
       screenOptions={{
@@ -119,6 +121,16 @@ export default function TabLayout() {
           title: 'Espace',
         }}
       />
+      <Tabs.Protected guard={canManage}>
+        <Tabs.Screen name="demandes" options={{
+          title: 'Demandes',
+          tabBarBadge: requests.length || undefined,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} focused={focused}
+              name={{ android: 'how_to_reg', ios: 'person.badge.plus', web: 'how_to_reg' }} />
+          ),
+        }} />
+      </Tabs.Protected>
     </Tabs>
   )
 }

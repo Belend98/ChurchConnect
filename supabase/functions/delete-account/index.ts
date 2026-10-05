@@ -91,11 +91,14 @@ async function handleRequest(req: Request): Promise<Response> {
     if (targetId !== user.id) {
       const { data: actor, error: actorError } = await supabaseAdmin
         .from('user_profil')
-        .select('role_app')
+        .select('role_app, statut_acces')
         .eq('id', user.id)
         .maybeSingle()
       if (actorError) {
         return jsonResponse({ error: 'Impossible de vérifier vos permissions.' }, 500)
+      }
+      if (actor?.statut_acces !== 'accepte') {
+        return jsonResponse({ error: 'Votre compte n’a pas accès à l’application.' }, 403)
       }
       actorRole = actor?.role_app
       if (actorRole !== 'pasteur' && actorRole !== 'admin') {

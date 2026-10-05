@@ -16,6 +16,8 @@ export function getAppRoleLabel(roleApp?: AppRole): string {
   return 'Membre'
 }
 
+export type StatutAcces = 'en_attente' | 'accepte' | 'refuse'
+
 export interface ProfilModel {
   id: string
   username?: string
@@ -25,20 +27,13 @@ export interface ProfilModel {
   imageUrl?: string
   dateNaissance?: Date
   roleApp: AppRole
-  /**
-   * @deprecated temp
-   */
-  isAdmin: boolean
+  statutAcces: StatutAcces
   createdAt: Date
 }
 
 export type CreateProfilModel = Omit<
   ProfilModel,
-  'id' | 'createdAt' | 'roleApp' | 'isAdmin'
+  'id' | 'createdAt' | 'roleApp' | 'statutAcces'
 > & {
   roleApp?: AppRole
-  /**
-   * @deprecated temp
-   */
-  isAdmin?: boolean
 }

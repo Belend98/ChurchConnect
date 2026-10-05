@@ -9,6 +9,7 @@ export interface NotificationRepository {
   markAllAsRead(userId: string): Promise<NotificationModel[]>
   markAsRead(id: string, userId: string): Promise<NotificationModel | null>
   deleteById(id: string, userId: string): Promise<void>
+  deleteByUser(userId: string): Promise<void>
   subscribeToUserNotifications(
     userId: string,
     onNotification: (notification: NotificationModel) => void,

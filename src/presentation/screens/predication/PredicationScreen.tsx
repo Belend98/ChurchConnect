@@ -1,5 +1,6 @@
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
+import { toCategorieErrorMessage } from '@/shared/utils/categorieErrors'
 import {
   Alert,
   Modal,
@@ -12,19 +13,23 @@ import {
   View,
 } from 'react-native'
 import { PredicationComponent } from '@/presentation/component/PredicationComponent'
+import { ListCount } from '@/presentation/component/ListCount'
 import { categorieService } from '@/composition/categorie'
 import { predicationService } from '@/composition/predication'
 import type { CategorieModel } from '@/domain/entités/Categorie'
+import { normalizeCategorieName } from '@/domain/rules/categorieRules'
 import type { PredicationModel } from '@/domain/entités/Predication'
 import { canManagePredications } from '@/domain/entités/Profil'
 import { usePredications } from '@/presentation/hooks/predication/usePredications'
 import { usePredicationFavorites } from '@/presentation/hooks/predication/usePredicationFavorites'
+import { usePredicationLikes } from '@/presentation/hooks/predication/usePredicationLikes'
+import { useTogglePredicationLike } from '@/presentation/hooks/predication/useTogglePredicationLike'
 import { useTogglePredicationFavorite } from '@/presentation/hooks/predication/useTogglePredicationFavorite'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { CATEGORIES_QUERY_KEY } from '@/presentation/queries/categorieQueries'
 import { PREDICATIONS_QUERY_KEY } from '@/presentation/queries/predicationQueries'
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 const ALL_CATEGORIES_FILTER = 'all'
@@ -39,10 +44,8 @@ export default function PredicationScreen() {
   const { data: profile, isError: isProfileError } = useCurrentProfile()
   const canManagePredicationItems = !isProfileError && canManagePredications(profile?.roleApp)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
-  const [likedById, setLikedById] = useState<Record<string, boolean>>({})
-  const [likesById, setLikesById] = useState<Record<string, number>>({})
-  const [likingId, setLikingId] = useState<string | null>(null)
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [categorySearch, setCategorySearch] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategoryId, setSelectedCategoryId] = useState(
     ALL_CATEGORIES_FILTER,
@@ -54,17 +57,25 @@ export default function PredicationScreen() {
     isError: isPredicationsError,
     isLoading,
   } = usePredications()
+  const { likesById, error: likesError } = usePredicationLikes(predications)
+  const toggleLikeMutation = useTogglePredicationLike()
   const { data: favoriteIds = [] } = usePredicationFavorites()
   const favoriteIdSet = new Set(favoriteIds)
   const toggleFavoriteMutation = useTogglePredicationFavorite()
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [], isPending: isLoadingCategories, error: categoriesError } = useQuery({
     queryKey: CATEGORIES_QUERY_KEY,
-    queryFn: () => categorieService.listCategories(),
+    queryFn: async ({ signal }) => {
+      const result = await categorieService.listCategories()
+      if (signal.aborted) throw new Error('Chargement des catégories annulé.')
+      return result
+    },
     staleTime: Infinity,
   })
 
   const createCategoryMutation = useMutation({
     mutationFn: (nom: string) => categorieService.createCategorie({ nom }),
+    onMutate: () => queryClient.cancelQueries({ queryKey: CATEGORIES_QUERY_KEY }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY }),
     onSuccess: (categorie) => {
       queryClient.setQueryData<CategorieModel[]>(
         CATEGORIES_QUERY_KEY,
@@ -78,6 +89,8 @@ export default function PredicationScreen() {
   const updateCategoryMutation = useMutation({
     mutationFn: ({ id, nom }: { id: string; nom: string }) =>
       categorieService.updateCategorie(id, { nom }),
+    onMutate: () => queryClient.cancelQueries({ queryKey: CATEGORIES_QUERY_KEY }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY }),
     onSuccess: (categorie) => {
       queryClient.setQueryData<CategorieModel[]>(
         CATEGORIES_QUERY_KEY,
@@ -91,6 +104,8 @@ export default function PredicationScreen() {
 
   const deleteCategoryMutation = useMutation({
     mutationFn: (id: string) => categorieService.deleteCategorie(id),
+    onMutate: () => queryClient.cancelQueries({ queryKey: CATEGORIES_QUERY_KEY }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: CATEGORIES_QUERY_KEY }),
     onSuccess: (_result, categorieId) => {
       queryClient.setQueryData<CategorieModel[]>(
         CATEGORIES_QUERY_KEY,
@@ -100,61 +115,13 @@ export default function PredicationScreen() {
       if (selectedCategoryId === categorieId) {
         setSelectedCategoryId(ALL_CATEGORIES_FILTER)
       }
+      queryClient.setQueryData<PredicationModel[]>(PREDICATIONS_QUERY_KEY, (current) =>
+        current?.map((item) => item.categorieId === categorieId ? { ...item, categorieId: undefined } : item),
+      )
+      if (editingCategoryId === categorieId) setEditingCategoryId(null)
+      void queryClient.invalidateQueries({ queryKey: PREDICATIONS_QUERY_KEY })
     },
   })
-
-  useEffect(() => {
-    let isMounted = true
-
-    async function loadEngagement() {
-      if (predications.length === 0) {
-        setLikedById({})
-        setLikesById({})
-        return
-      }
-
-      const engagementEntries = await Promise.all(
-        predications.map(async (item) => {
-          const [likes, isLiked] = await Promise.all([
-            predicationService.countLikes(item.id),
-            predicationService.isLikedByCurrentUser(item.id),
-          ])
-
-          return [item.id, { isLiked, likes }] as const
-        }),
-      )
-
-      if (!isMounted) return
-
-      setLikedById(
-        Object.fromEntries(
-          engagementEntries.map(([id, engagement]) => [
-            id,
-            engagement.isLiked,
-          ]),
-        ),
-      )
-      setLikesById(
-        Object.fromEntries(
-          engagementEntries.map(([id, engagement]) => [
-            id,
-            engagement.likes,
-          ]),
-        ),
-      )
-    }
-
-    loadEngagement().catch((error) => {
-      if (!isMounted) return
-      console.warn(error)
-      setLikedById({})
-      setLikesById({})
-    })
-
-    return () => {
-      isMounted = false
-    }
-  }, [predications])
 
   function openPlayer(predication: PredicationModel) {
     router.push(
@@ -180,6 +147,7 @@ export default function PredicationScreen() {
   }
 
   async function createCategory() {
+    if (categoryActionId || !canManagePredicationItems) return
     const trimmedName = newCategoryName.trim()
 
     setCategoryError(null)
@@ -196,7 +164,7 @@ export default function PredicationScreen() {
       setNewCategoryName('')
     } catch (error) {
       setCategoryError(
-        toErrorMessage(error, 'Impossible de créer cette catégorie.'),
+        toCategorieErrorMessage(error, 'Impossible de créer cette catégorie.'),
       )
     } finally {
       setCategoryActionId(null)
@@ -210,6 +178,7 @@ export default function PredicationScreen() {
   }
 
   async function updateCategory(categorieId: string) {
+    if (categoryActionId || !canManagePredicationItems) return
     const trimmedName = editingCategoryName.trim()
 
     setCategoryError(null)
@@ -230,7 +199,7 @@ export default function PredicationScreen() {
       setEditingCategoryName('')
     } catch (error) {
       setCategoryError(
-        toErrorMessage(error, 'Impossible de modifier cette catégorie.'),
+        toCategorieErrorMessage(error, 'Impossible de modifier cette catégorie.'),
       )
     } finally {
       setCategoryActionId(null)
@@ -238,9 +207,11 @@ export default function PredicationScreen() {
   }
 
   function confirmDeleteCategory(categorie: CategorieModel) {
+    if (categoryActionId || !canManagePredicationItems) return
+    const message = `Supprimer « ${categorie.nom} » ? Les prédications seront conservées sans catégorie.`
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(
-        `Voulez-vous vraiment supprimer "${categorie.nom}" ?`,
+        message,
       )
 
       if (confirmed) void deleteCategory(categorie.id)
@@ -249,7 +220,7 @@ export default function PredicationScreen() {
 
     Alert.alert(
       'Supprimer la catégorie',
-      `Voulez-vous vraiment supprimer "${categorie.nom}" ?`,
+      message,
       [
         { style: 'cancel', text: 'Annuler' },
         {
@@ -262,6 +233,7 @@ export default function PredicationScreen() {
   }
 
   async function deleteCategory(categorieId: string) {
+    if (categoryActionId || !canManagePredicationItems) return
     setCategoryActionId(categorieId)
     setCategoryError(null)
 
@@ -271,7 +243,7 @@ export default function PredicationScreen() {
       setCategoryError(
         toErrorMessage(
           error,
-          'Impossible de supprimer cette catégorie. Elle est peut-être utilisée.',
+          'Impossible de supprimer cette catégorie.',
         ),
       )
     } finally {
@@ -340,48 +312,12 @@ export default function PredicationScreen() {
   }
 
   async function toggleLike(predication: PredicationModel) {
-    if (likingId) return
-
-    const wasLiked = Boolean(likedById[predication.id])
-
-    setLikingId(predication.id)
-    setLikedById((current) => ({
-      ...current,
-      [predication.id]: !wasLiked,
-    }))
-    setLikesById((current) => ({
-      ...current,
-      [predication.id]: Math.max(0, (current[predication.id] ?? 0) + (wasLiked ? -1 : 1)),
-    }))
-
+    if (toggleLikeMutation.isPending) return
     try {
-      const isLiked = await predicationService.toggleLike(predication.id)
-      const likes = await predicationService.countLikes(predication.id)
-
-      setLikedById((current) => ({
-        ...current,
-        [predication.id]: isLiked,
-      }))
-      setLikesById((current) => ({
-        ...current,
-        [predication.id]: likes,
-      }))
+      await toggleLikeMutation.mutateAsync(predication.id)
     } catch (error) {
       console.warn(error)
-      setLikedById((current) => ({
-        ...current,
-        [predication.id]: wasLiked,
-      }))
-      setLikesById((current) => ({
-        ...current,
-        [predication.id]: Math.max(0, (current[predication.id] ?? 0) + (wasLiked ? 1 : -1)),
-      }))
-      Alert.alert(
-        'Like impossible',
-        toErrorMessage(error, "Une erreur est survenue pendant le like."),
-      )
-    } finally {
-      setLikingId(null)
+      Alert.alert('Like impossible', toErrorMessage(error, 'Une erreur est survenue pendant le like.'))
     }
   }
 
@@ -399,12 +335,17 @@ export default function PredicationScreen() {
     }
   }
 
+  const visibleCategories = categories.filter((categorie) =>
+    normalizeCategorieName(categorie.nom).includes(normalizeCategorieName(categorySearch)),
+  )
+  const effectiveCategoryId = categories.some((categorie) => categorie.id === selectedCategoryId)
+    ? selectedCategoryId : ALL_CATEGORIES_FILTER
   const normalizedSearch = searchQuery.trim().toLowerCase()
   const filteredPredications = predications.filter((predication) => {
     const categoryName = getCategoryName(predication.categorieId)
     const matchesCategory =
-      selectedCategoryId === ALL_CATEGORIES_FILTER ||
-      predication.categorieId === selectedCategoryId
+      effectiveCategoryId === ALL_CATEGORIES_FILTER ||
+      predication.categorieId === effectiveCategoryId
     const matchesSearch =
       !normalizedSearch ||
       predication.title.toLowerCase().includes(normalizedSearch) ||
@@ -446,6 +387,8 @@ export default function PredicationScreen() {
         {canManagePredicationItems ? (
           <Pressable
             onPress={() => setIsCategoryModalOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Gérer les catégories"
             style={styles.filterButton}
           >
             <Text style={styles.filterButtonText}>≡</Text>
@@ -464,16 +407,16 @@ export default function PredicationScreen() {
             onPress={() => setSelectedCategoryId(filter.id)}
             style={[
               styles.filterPill,
-              selectedCategoryId === filter.id && styles.filterPillActive,
+              effectiveCategoryId === filter.id && styles.filterPillActive,
             ]}
           >
             <Text
               style={[
                 styles.filterText,
-                selectedCategoryId === filter.id && styles.filterTextActive,
+                effectiveCategoryId === filter.id && styles.filterTextActive,
               ]}
             >
-              {selectedCategoryId === filter.id ? (
+              {effectiveCategoryId === filter.id ? (
                 <Text style={styles.filterCheck}>✓</Text>
               ) : null}
               {filter.nom}
@@ -484,6 +427,7 @@ export default function PredicationScreen() {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Toutes les prédications</Text>
+        {!isLoading && !isPredicationsError ? <ListCount count={filteredPredications.length} label="prédications affichées" /> : null}
       </View>
 
       {isPredicationsError ? (
@@ -498,6 +442,12 @@ export default function PredicationScreen() {
         </View>
       ) : null}
 
+      {likesError ? (
+        <Text accessibilityRole="alert" style={styles.emptyText}>
+          {toErrorMessage(likesError, 'Impossible de charger les likes.')}
+        </Text>
+      ) : null}
+
       <View style={styles.sermonList}>
         {filteredPredications.map((predication) => (
           <PredicationComponent
@@ -506,10 +456,10 @@ export default function PredicationScreen() {
             isDeleting={deletingId === predication.id}
             isFavorite={favoriteIdSet.has(predication.id)}
             isFavoriting={toggleFavoriteMutation.isPending && toggleFavoriteMutation.variables === predication.id}
-            isLiked={Boolean(likedById[predication.id])}
-            isLiking={likingId === predication.id}
+            isLiked={Boolean(likesById[predication.id]?.isLiked)}
+            isLiking={toggleLikeMutation.isPending && toggleLikeMutation.variables === predication.id}
             key={predication.id}
-            likes={likesById[predication.id] ?? 0}
+            likes={likesById[predication.id]?.count ?? 0}
             onDelete={confirmDelete}
             onEdit={openUpdate}
             onListen={openPlayer}
@@ -533,103 +483,95 @@ export default function PredicationScreen() {
         animationType="slide"
         onRequestClose={() => setIsCategoryModalOpen(false)}
         transparent
-        visible={isCategoryModalOpen}
+        visible={isCategoryModalOpen && canManagePredicationItems}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Catégories</Text>
-              <Pressable onPress={() => setIsCategoryModalOpen(false)}>
+              <Text accessibilityRole="header" style={styles.modalTitle}>Catégories</Text>
+              <Pressable accessibilityRole="button" onPress={() => setIsCategoryModalOpen(false)}>
                 <Text style={styles.modalClose}>Fermer</Text>
               </Pressable>
             </View>
-
+            <TextInput
+              accessibilityLabel="Rechercher une catégorie par nom"
+              autoCorrect={false}
+              onChangeText={setCategorySearch}
+              placeholder="Rechercher par nom"
+              placeholderTextColor={colors.onSurfaceVariant}
+              style={styles.categorySearchInput}
+              value={categorySearch}
+            />
             <View style={styles.categoryCreateRow}>
               <TextInput
-                onChangeText={setNewCategoryName}
-                placeholder="Nouvelle catégorie"
-                placeholderTextColor={colors.outline}
+                accessibilityLabel={editingCategoryId ? 'Renommer la catégorie' : 'Nom de la nouvelle catégorie'}
+                editable={!categoryActionId}
+                onChangeText={editingCategoryId ? setEditingCategoryName : setNewCategoryName}
+                onSubmitEditing={() => editingCategoryId ? void updateCategory(editingCategoryId) : void createCategory()}
+                placeholder={editingCategoryId ? 'Nouveau nom' : 'Nouvelle catégorie'}
+                placeholderTextColor={colors.onSurfaceVariant}
+                returnKeyType="done"
                 style={styles.categoryInput}
-                value={newCategoryName}
+                value={editingCategoryId ? editingCategoryName : newCategoryName}
               />
               <Pressable
-                disabled={categoryActionId === 'new'}
-                onPress={createCategory}
-                style={[
-                  styles.smallActionButton,
-                  categoryActionId === 'new' && styles.disabledButton,
-                ]}
+                accessibilityRole="button"
+                disabled={Boolean(categoryActionId)}
+                onPress={() => editingCategoryId ? void updateCategory(editingCategoryId) : void createCategory()}
+                style={[styles.smallActionButton, Boolean(categoryActionId) && styles.disabledButton]}
               >
-                <Text style={styles.smallActionButtonText}>Ajouter</Text>
+                <Text style={styles.smallActionButtonText}>
+                  {categoryActionId ? '…' : editingCategoryId ? 'Enregistrer' : 'Ajouter'}
+                </Text>
               </Pressable>
             </View>
-
-            {categoryError ? (
-              <Text style={styles.errorText}>{categoryError}</Text>
+            {editingCategoryId ? (
+              <Pressable accessibilityRole="button" disabled={Boolean(categoryActionId)} onPress={() => {
+                setEditingCategoryId(null)
+                setEditingCategoryName('')
+                setCategoryError(null)
+              }}>
+                <Text style={styles.modalClose}>Annuler le renommage</Text>
+              </Pressable>
             ) : null}
-
+            {categoryError || categoriesError ? (
+              <Text accessibilityRole="alert" style={styles.errorText}>
+                {categoryError ?? toErrorMessage(categoriesError, 'Impossible de charger les catégories.')}
+              </Text>
+            ) : null}
             <ScrollView
               contentContainerStyle={styles.categoryList}
+              keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              {categories.map((categorie) => {
-                const isEditing = editingCategoryId === categorie.id
-                const isBusy = categoryActionId === categorie.id
-
-                return (
-                  <View key={categorie.id} style={styles.categoryRow}>
-                    {isEditing ? (
-                      <TextInput
-                        autoFocus
-                        onChangeText={setEditingCategoryName}
-                        placeholder="Nom"
-                        placeholderTextColor={colors.outline}
-                        style={styles.categoryInput}
-                        value={editingCategoryName}
-                      />
-                    ) : (
-                      <Text numberOfLines={1} style={styles.categoryName}>
-                        {categorie.nom}
-                      </Text>
-                    )}
-
-                    {isEditing ? (
-                      <Pressable
-                        disabled={isBusy}
-                        onPress={() => updateCategory(categorie.id)}
-                        style={[
-                          styles.iconActionButton,
-                          isBusy && styles.disabledButton,
-                        ]}
-                      >
-                        <Text style={styles.iconActionText}>✓</Text>
-                      </Pressable>
-                    ) : (
-                      <Pressable
-                        disabled={isBusy}
-                        onPress={() => startEditCategory(categorie)}
-                        style={styles.iconActionButton}
-                      >
-                        <Text style={styles.iconActionText}>✎</Text>
-                      </Pressable>
-                    )}
-
-                    <Pressable
-                      disabled={isBusy}
-                      onPress={() => confirmDeleteCategory(categorie)}
-                      style={[
-                        styles.iconDangerButton,
-                        isBusy && styles.disabledButton,
-                      ]}
-                    >
-                      <Text style={styles.iconDangerText}>×</Text>
-                    </Pressable>
-                  </View>
-                )
-              })}
-
-              {categories.length === 0 ? (
-                <Text style={styles.modalText}>Aucune catégorie pour le moment.</Text>
+              {visibleCategories.map((categorie) => (
+                <View key={categorie.id} style={styles.categoryRow}>
+                  <Text numberOfLines={1} style={styles.categoryName}>{categorie.nom}</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={'Renommer ' + categorie.nom}
+                    disabled={Boolean(categoryActionId)}
+                    onPress={() => startEditCategory(categorie)}
+                    style={[styles.iconActionButton, Boolean(categoryActionId) && styles.disabledButton]}
+                  >
+                    <Text style={styles.iconActionText}>Renommer</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={'Supprimer ' + categorie.nom}
+                    disabled={Boolean(categoryActionId)}
+                    onPress={() => confirmDeleteCategory(categorie)}
+                    style={[styles.iconDangerButton, Boolean(categoryActionId) && styles.disabledButton]}
+                  >
+                    <Text style={styles.iconDangerText}>Supprimer</Text>
+                  </Pressable>
+                </View>
+              ))}
+              {isLoadingCategories ? <Text style={styles.modalText}>Chargement…</Text> : null}
+              {!isLoadingCategories && !categoriesError && visibleCategories.length === 0 ? (
+                <Text style={styles.modalText}>
+                  {categories.length ? 'Aucun résultat.' : 'Aucune catégorie.'}
+                </Text>
               ) : null}
             </ScrollView>
           </View>
@@ -809,6 +751,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   sectionHeader: {
+    gap: 8,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -816,6 +759,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   sectionTitle: {
+    flexShrink: 1,
     color: colors.primary,
     fontSize: 19,
     fontWeight: '800',
@@ -847,11 +791,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
+    alignSelf: 'center',
     backgroundColor: colors.surfaceContainerLowest,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     gap: 14,
-    maxHeight: '86%',
+    maxHeight: '78%',
+    maxWidth: 520,
+    width: '100%',
     padding: 18,
   },
   modalHeader: {
@@ -878,6 +825,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 10,
+  },
+  categorySearchInput: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 8,
+    color: colors.onSurface,
+    fontSize: 14,
+    minHeight: 40,
+    paddingHorizontal: 12,
   },
   categoryInput: {
     backgroundColor: colors.surfaceContainer,
@@ -926,30 +881,30 @@ const styles = StyleSheet.create({
   iconActionButton: {
     alignItems: 'center',
     borderColor: colors.surfaceContainerHigh,
-    borderRadius: 18,
+    borderRadius: 8,
     borderWidth: 1,
-    height: 36,
+    minHeight: 40,
     justifyContent: 'center',
-    width: 36,
+    paddingHorizontal: 8,
   },
   iconActionText: {
     color: colors.primary,
-    fontSize: 17,
+    fontSize: 12,
     fontWeight: '700',
     lineHeight: 20,
   },
   iconDangerButton: {
     alignItems: 'center',
     borderColor: colors.error,
-    borderRadius: 18,
+    borderRadius: 8,
     borderWidth: 1,
-    height: 36,
+    minHeight: 40,
     justifyContent: 'center',
-    width: 36,
+    paddingHorizontal: 8,
   },
   iconDangerText: {
     color: colors.error,
-    fontSize: 24,
+    fontSize: 12,
     fontWeight: '700',
     lineHeight: 26,
   },

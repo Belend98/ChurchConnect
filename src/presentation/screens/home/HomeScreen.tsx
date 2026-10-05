@@ -1,5 +1,6 @@
 import { annonceService } from '@/composition/annonce'
 import { MemberRoleButton } from '@/presentation/component/MemberRoleButton'
+import { ListCount } from '@/presentation/component/ListCount'
 import {
   canManagePredications,
   getAppRoleLabel,
@@ -9,16 +10,18 @@ import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
 import { useNotifications } from '@/presentation/hooks/notification/useNotifications'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { useCommunityMembers } from '@/presentation/hooks/profil/useCommunityMembers'
-import { annoncesQueryKey } from '@/presentation/queries/annonceQueries'
+import { annoncesQueryKey, applyAnnonceChange } from '@/presentation/queries/annonceQueries'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { router, useFocusEffect } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { useCallback, useState } from 'react'
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -47,6 +50,16 @@ type MemberRoleFilter = (typeof memberRoleFilters)[number]['value']
 
 export default function HomeScreen() {
   const userId = useCurrentUserId()
+  const queryClient = useQueryClient()
+  const [annonceActionError, setAnnonceActionError] = useState<string | null>(null)
+  const deleteAnnonceMutation = useMutation({
+    mutationFn: (id: string) => annonceService.deleteAnnonce(id),
+    onMutate: () => ({ userId }),
+    onSuccess: (_result, id, context) => {
+      if (!context?.userId || context.userId !== userId) return
+      return applyAnnonceChange(queryClient, userId, { type: 'delete', id })
+    },
+  })
   const {
     data: annonces = [],
     isPending: isLoadingAnnonces,
@@ -62,7 +75,7 @@ export default function HomeScreen() {
   })
   const [currentAnnonceIndex, setCurrentAnnonceIndex] = useState(0)
   const { data: profile, isError: isProfileError, refetch: refetchProfile } = useCurrentProfile()
-  const canCreateAnnonce = !isProfileError && canManagePredications(profile?.roleApp)
+  const canCreateAnnonce = !isProfileError && profile?.statutAcces === 'accepte' && canManagePredications(profile.roleApp)
   const canFilterMembers = !isProfileError && (profile?.roleApp === 'pasteur' || profile?.roleApp === 'admin')
   const { unreadCount: notificationUnreadCount } = useNotifications()
   const {
@@ -75,15 +88,13 @@ export default function HomeScreen() {
   const [memberRoleFilter, setMemberRoleFilter] = useState<MemberRoleFilter>('all')
 
   const searchTerms = normalizeMemberSearch(memberSearch).trim().split(/\s+/).filter(Boolean)
-  const visibleMembers = canFilterMembers
-    ? communityMembers.filter((member) => {
-        if (memberRoleFilter !== 'all' && member.roleApp !== memberRoleFilter) return false
-        const searchableName = normalizeMemberSearch(
-          [member.prenom, member.nom, member.username].filter(Boolean).join(' '),
-        )
-        return searchTerms.every((term) => searchableName.includes(term.replace(/^@/, '')))
-      })
-    : communityMembers
+  const visibleMembers = communityMembers.filter((member) => {
+    if (canFilterMembers && memberRoleFilter !== 'all' && member.roleApp !== memberRoleFilter) return false
+    const searchableName = normalizeMemberSearch(
+      [member.prenom, member.nom, member.username].filter(Boolean).join(' '),
+    )
+    return searchTerms.every((term) => searchableName.includes(term.replace(/^@/, '')))
+  })
 
   useFocusEffect(
     useCallback(() => {
@@ -102,6 +113,29 @@ export default function HomeScreen() {
 
     const nextIndex = (index + annonces.length) % annonces.length
     setCurrentAnnonceIndex(nextIndex)
+  }
+
+  async function deleteAnnonce(id: string) {
+    setAnnonceActionError(null)
+    try {
+      await deleteAnnonceMutation.mutateAsync(id)
+    } catch (error) {
+      setAnnonceActionError(toErrorMessage(error, "Impossible de supprimer l'annonce."))
+    }
+  }
+
+  function confirmDeleteAnnonce() {
+    if (!currentAnnonce || !canCreateAnnonce || deleteAnnonceMutation.isPending) return
+    const { id, titre } = currentAnnonce
+    const message = `Voulez-vous supprimer « ${titre} » ?`
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) void deleteAnnonce(id)
+      return
+    }
+    Alert.alert('Supprimer l’annonce', message, [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Supprimer', style: 'destructive', onPress: () => void deleteAnnonce(id) },
+    ])
   }
 
   return (
@@ -169,17 +203,6 @@ export default function HomeScreen() {
           {currentAnnonce ? (
             <View style={styles.annonceCarousel}>
               <View style={styles.annonceItem}>
-                {currentAnnonce.imageUrl ? (
-                  <Image
-                    source={{ uri: currentAnnonce.imageUrl }}
-                    style={styles.annonceImage}
-                  />
-                ) : (
-                  <View style={styles.annonceImageFallback}>
-                    <Text style={styles.annonceImageFallbackText}>Annonce</Text>
-                  </View>
-                )}
-
                 <View style={styles.annonceBody}>
                   <Text style={styles.annonceBadge}>Vie communautaire</Text>
                   <Text style={styles.annonceTitle}>{currentAnnonce.titre}</Text>
@@ -189,6 +212,26 @@ export default function HomeScreen() {
                   <Text style={styles.annonceDate}>
                     {currentAnnonce.createdAt.toLocaleDateString('fr-FR')}
                   </Text>
+                  {canCreateAnnonce ? (
+                    <View style={styles.annonceActions}>
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={deleteAnnonceMutation.isPending}
+                        onPress={() => router.push({ pathname: '/create-annonce', params: { id: currentAnnonce.id } } as never)}
+                        style={styles.annonceActionButton}
+                      >
+                        <Text style={styles.annonceActionText}>Modifier</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={deleteAnnonceMutation.isPending}
+                        onPress={confirmDeleteAnnonce}
+                        style={styles.annonceActionButton}
+                      >
+                        <Text style={styles.annonceDeleteText}>{deleteAnnonceMutation.isPending ? 'Suppression...' : 'Supprimer'}</Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
                 </View>
               </View>
             </View>
@@ -228,53 +271,54 @@ export default function HomeScreen() {
           ) : null}
         </View>
 
+        {annonceActionError ? <Text accessibilityRole="alert" style={styles.membersError}>{annonceActionError}</Text> : null}
+
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Membres de la communauté</Text>
+          {!isLoadingMembers && !membersError ? <ListCount count={visibleMembers.length} label="membres affichés" /> : null}
         </View>
 
         <View style={styles.membersCard}>
-          {canFilterMembers ? (
-            <View style={styles.memberFilters}>
-              <View style={styles.memberSearchBox}>
-                <TextInput
-                  accessibilityLabel="Rechercher un membre par nom ou nom d’utilisateur"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  onChangeText={setMemberSearch}
-                  placeholder="Nom ou @pseudo"
-                  placeholderTextColor={colors.onSurfaceVariant}
-                  returnKeyType="search"
-                  style={styles.memberSearchInput}
-                  value={memberSearch}
-                />
-                {memberSearch ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Effacer la recherche"
-                    onPress={() => setMemberSearch('')}
-                    style={styles.clearMemberSearch}
-                  >
-                    <Text style={styles.clearMemberSearchText}>×</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-              <View style={styles.memberRoleFilters}>
-                {memberRoleFilters.map((filter) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: memberRoleFilter === filter.value }}
-                    key={filter.value}
-                    onPress={() => setMemberRoleFilter(filter.value)}
-                    style={[styles.memberFilterButton, memberRoleFilter === filter.value && styles.memberFilterActive]}
-                  >
-                    <Text style={[styles.memberFilterText, memberRoleFilter === filter.value && styles.memberFilterTextActive]}>
-                      {filter.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+          <View style={styles.memberFilters}>
+            <View style={styles.memberSearchBox}>
+              <TextInput
+                accessibilityLabel="Rechercher un membre par nom ou nom d’utilisateur"
+                autoCapitalize="none"
+                autoCorrect={false}
+                onChangeText={setMemberSearch}
+                placeholder="Nom ou @pseudo"
+                placeholderTextColor={colors.onSurfaceVariant}
+                returnKeyType="search"
+                style={styles.memberSearchInput}
+                value={memberSearch}
+              />
+              {memberSearch ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Effacer la recherche"
+                  onPress={() => setMemberSearch('')}
+                  style={styles.clearMemberSearch}
+                >
+                  <Text style={styles.clearMemberSearchText}>×</Text>
+                </Pressable>
+              ) : null}
             </View>
-          ) : null}
+            {canFilterMembers ? <View style={styles.memberRoleFilters}>
+              {memberRoleFilters.map((filter) => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: memberRoleFilter === filter.value }}
+                  key={filter.value}
+                  onPress={() => setMemberRoleFilter(filter.value)}
+                  style={[styles.memberFilterButton, memberRoleFilter === filter.value && styles.memberFilterActive]}
+                >
+                  <Text style={[styles.memberFilterText, memberRoleFilter === filter.value && styles.memberFilterTextActive]}>
+                    {filter.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View> : null}
+          </View>
 
           {isLoadingMembers ? <ActivityIndicator color={colors.primary} /> : null}
 
@@ -448,12 +492,14 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   sectionHeader: {
+    gap: 8,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 2,
   },
   sectionTitle: {
+    flexShrink: 1,
     color: colors.primary,
     fontSize: 19,
     fontWeight: '800',
@@ -476,23 +522,6 @@ const styles = StyleSheet.create({
   annonceItem: {
     backgroundColor: colors.surfaceContainerLowest,
     overflow: 'hidden',
-  },
-  annonceImage: {
-    backgroundColor: colors.surfaceContainerHigh,
-    height: 166,
-    width: '100%',
-  },
-  annonceImageFallback: {
-    alignItems: 'center',
-    backgroundColor: colors.tertiary,
-    height: 166,
-    justifyContent: 'center',
-    width: '100%',
-  },
-  annonceImageFallbackText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
   },
   annonceBody: {
     gap: 8,
@@ -526,6 +555,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 2,
   },
+  annonceActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  annonceActionButton: {
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 8,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+  },
+  annonceActionText: { color: colors.primary, fontWeight: '700' },
+  annonceDeleteText: { color: colors.error, fontWeight: '700' },
   carouselFooter: {
     alignItems: 'center',
     backgroundColor: colors.surfaceContainer,
