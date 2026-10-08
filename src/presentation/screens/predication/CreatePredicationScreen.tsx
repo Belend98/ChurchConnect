@@ -51,7 +51,6 @@ export default function CreatePredicationScreen() {
     resolver: zodResolver(createPredicationSchema),
     defaultValues: {
       categorieId: '',
-      durationMinutes: '',
       mediaUrl: '',
       title: '',
     },
@@ -59,10 +58,6 @@ export default function CreatePredicationScreen() {
 
   const createPredicationMutation = useMutation({
     mutationFn: async (data: CreatePredicationInput) => {
-      const durationSeconds = data.durationMinutes
-        ? Math.round(Number(data.durationMinutes) * 60)
-        : undefined
-
       if (selectedAudio) {
         setCreationStage('preparing')
         const response = await fetch(selectedAudio.uri)
@@ -74,7 +69,6 @@ export default function CreatePredicationScreen() {
           audio,
           categorieId: data.categorieId?.trim() || undefined,
           contentType: selectedAudio.contentType,
-          durationSeconds,
           fileName: selectedAudio.fileName,
           onProgress: (progress) => {
             setUploadProgress(progress)
@@ -87,7 +81,6 @@ export default function CreatePredicationScreen() {
       setCreationStage('saving')
       return predicationService.createPredication({
         categorieId: data.categorieId?.trim() || undefined,
-        durationSeconds,
         mediaUrl: data.mediaUrl?.trim() ?? '',
         title: data.title.trim(),
       })
@@ -249,26 +242,6 @@ export default function CreatePredicationScreen() {
         />
         {errors.mediaUrl ? (
           <Text style={styles.errorText}>{errors.mediaUrl.message}</Text>
-        ) : null}
-
-        <Text style={styles.label}>Durée en minutes</Text>
-        <Controller
-          control={control}
-          name="durationMinutes"
-          render={({ field: { onBlur, onChange, value } }) => (
-            <TextInput
-              keyboardType="numeric"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              placeholder="32"
-              placeholderTextColor={colors.outline}
-              style={styles.input}
-              value={value}
-            />
-          )}
-        />
-        {errors.durationMinutes ? (
-          <Text style={styles.errorText}>{errors.durationMinutes.message}</Text>
         ) : null}
 
         <Text style={styles.label}>Catégorie</Text>

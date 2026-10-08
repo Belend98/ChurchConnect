@@ -9,14 +9,6 @@ export const createPredicationSchema = z.object({
       (value) => !value || z.string().uuid().safeParse(value).success,
       'La catégorie doit être un identifiant UUID valide.',
     ),
-  durationMinutes: z
-    .string()
-    .trim()
-    .optional()
-    .refine(
-      (value) => !value || (Number.isInteger(Number(value)) && Number(value) > 0),
-      'La durée doit être un nombre.',
-    ),
   mediaUrl: z
     .string()
     .trim()

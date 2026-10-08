@@ -30,14 +30,6 @@ function getParam(value: string | string[] | undefined): string {
   return value ?? ''
 }
 
-function secondsToMinutes(value: string): string {
-  const seconds = Number(value)
-
-  if (!Number.isFinite(seconds) || seconds <= 0) return ''
-
-  return String(Math.round(seconds / 60))
-}
-
 const ACCESS_DENIED_MESSAGE =
   'Seuls les pasteurs et administrateurs peuvent modifier une prédication.'
 
@@ -63,7 +55,6 @@ export default function UpdatePredicationScreen() {
     resolver: zodResolver(createPredicationSchema),
     defaultValues: {
       categorieId: getParam(params.categorieId),
-      durationMinutes: secondsToMinutes(getParam(params.durationSeconds)),
       mediaUrl: getParam(params.mediaUrl),
       title: getParam(params.title),
     },
@@ -75,10 +66,6 @@ export default function UpdatePredicationScreen() {
         throw new Error("Identifiant de prédication manquant.")
       }
 
-      const durationSeconds = data.durationMinutes
-        ? Math.round(Number(data.durationMinutes) * 60)
-        : undefined
-
       if (selectedAudio) {
         const response = await fetch(selectedAudio.uri)
         const audio = await response.arrayBuffer()
@@ -87,7 +74,6 @@ export default function UpdatePredicationScreen() {
           audio,
           categorieId: data.categorieId?.trim() || undefined,
           contentType: selectedAudio.contentType,
-          durationSeconds,
           fileName: selectedAudio.fileName,
           title: data.title.trim(),
         })
@@ -95,7 +81,6 @@ export default function UpdatePredicationScreen() {
 
       return predicationService.updatePredication(predicationId, {
         categorieId: data.categorieId?.trim() || undefined,
-        durationSeconds,
         mediaUrl: data.mediaUrl?.trim() ?? '',
         title: data.title.trim(),
       })
@@ -258,26 +243,6 @@ export default function UpdatePredicationScreen() {
         />
         {errors.mediaUrl ? (
           <Text style={styles.errorText}>{errors.mediaUrl.message}</Text>
-        ) : null}
-
-        <Text style={styles.label}>Durée en minutes</Text>
-        <Controller
-          control={control}
-          name="durationMinutes"
-          render={({ field: { onBlur, onChange, value } }) => (
-            <TextInput
-              keyboardType="numeric"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              placeholder="32"
-              placeholderTextColor={colors.outline}
-              style={styles.input}
-              value={value}
-            />
-          )}
-        />
-        {errors.durationMinutes ? (
-          <Text style={styles.errorText}>{errors.durationMinutes.message}</Text>
         ) : null}
 
         <Text style={styles.label}>Catégorie</Text>

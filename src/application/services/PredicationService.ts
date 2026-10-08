@@ -94,7 +94,14 @@ export class PredicationService {
     data: UpdatePredicationModel,
   ): Promise<PredicationModel> {
     const existingPredication = await this.predicationRepository.getById(id)
-    const updatedPredication = await this.predicationRepository.update(id, data)
+    const updatedPredication = await this.predicationRepository.update(id, {
+      ...data,
+      durationSeconds: data.durationSeconds ?? (
+        existingPredication?.mediaUrl === data.mediaUrl
+          ? existingPredication.durationSeconds
+          : undefined
+      ),
+    })
 
     if (existingPredication?.mediaUrl !== updatedPredication.mediaUrl) {
       await this.deleteStoredAudioQuietly(existingPredication?.mediaUrl)

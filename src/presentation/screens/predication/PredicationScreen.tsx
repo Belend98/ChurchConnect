@@ -257,7 +257,6 @@ export default function PredicationScreen() {
         pathname: '/update-predication',
         params: {
           categorieId: predication.categorieId ?? '',
-          durationSeconds: String(predication.durationSeconds ?? ''),
           id: predication.id,
           mediaUrl: predication.mediaUrl,
           title: predication.title,
