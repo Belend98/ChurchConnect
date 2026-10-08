@@ -163,7 +163,7 @@ export default function NotificationsScreen() {
         router.push({
           pathname: '/groupe-detail',
           params: { id: groupe.id, name: groupe.name },
-        } as never)
+        })
       } catch (groupError) {
         setError(toErrorMessage(groupError, 'Impossible de vérifier l’accès au groupe.'))
       }
@@ -171,7 +171,7 @@ export default function NotificationsScreen() {
     }
 
     if (notification.type === 'annonce') {
-      router.push('/(tabs)/home' as never)
+      router.push('/(tabs)/home')
     }
   }
 

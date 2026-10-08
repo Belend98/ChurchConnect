@@ -18,7 +18,7 @@ export default function GroupeScreen() {
   const visibleGroups = groups.filter((group) => normalizeGroupSearch(group.name).includes(normalizedSearch))
 
   function openCreateGroupe() {
-    router.push('/create-groupe' as never)
+    router.push('/create-groupe')
   }
 
   function openGroupe(group: GroupeModel) {
@@ -29,7 +29,7 @@ export default function GroupeScreen() {
           id: group.id,
           name: group.name,
         },
-      } as never,
+      },
     )
   }
 

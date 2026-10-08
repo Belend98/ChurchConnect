@@ -158,7 +158,7 @@ export default function HomeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Notifications"
-            onPress={() => router.push('/notifications' as never)}
+            onPress={() => router.push('/notifications')}
             style={styles.notificationButton}
           >
             <SymbolView
@@ -217,7 +217,7 @@ export default function HomeScreen() {
                       <Pressable
                         accessibilityRole="button"
                         disabled={deleteAnnonceMutation.isPending}
-                        onPress={() => router.push({ pathname: '/create-annonce', params: { id: currentAnnonce.id } } as never)}
+                        onPress={() => router.push({ pathname: '/create-annonce', params: { id: currentAnnonce.id } })}
                         style={styles.annonceActionButton}
                       >
                         <Text style={styles.annonceActionText}>Modifier</Text>
@@ -377,7 +377,7 @@ export default function HomeScreen() {
 
       {canCreateAnnonce ? (
         <Pressable
-          onPress={() => router.push('/create-annonce' as never)}
+          onPress={() => router.push('/create-annonce')}
           style={styles.floatingButton}
         >
           <Text style={styles.floatingButtonText}>+</Text>

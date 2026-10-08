@@ -63,7 +63,7 @@ export function usePredicationsRealtime() {
           }
 
           if (payload.eventType === 'DELETE') {
-            const deletedPredication = payload.old as Partial<PredicationRow>
+            const deletedPredication = payload.old
 
             queryClient.setQueryData<PredicationModel[]>(
               PREDICATIONS_QUERY_KEY,

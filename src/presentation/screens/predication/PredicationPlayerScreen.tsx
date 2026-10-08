@@ -68,9 +68,9 @@ export default function PredicationPlayerScreen() {
     getFinitePositiveNumber(params.durationSeconds)
   const progress = duration > 0 ? currentTime / duration : 0
   const remainingSeconds = Math.max(duration - currentTime, 0)
-  const progressWidth = `${
+  const progressWidth: DimensionValue = `${
     Math.min(Math.max(progress, 0), 1) * 100
-  }%` as DimensionValue
+  }%`
   const resumeStorageKey = `predication-progress:${params.id ?? params.mediaUrl ?? title}`
 
   useEffect(() => {

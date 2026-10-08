@@ -24,8 +24,8 @@ export function useAnnoncesRealtime() {
         if (!active) return
 
         if (payload.eventType === 'DELETE') {
-          const id = payload.old.annonce_id as string | undefined
-          if (id) void applyAnnonceChange(queryClient, userId, { type: 'delete', id })
+          const id = payload.old.annonce_id
+          if (typeof id === 'string' && id) void applyAnnonceChange(queryClient, userId, { type: 'delete', id })
           return
         }
 

@@ -1,0 +1,409 @@
+[
+  {
+    "title": "1. Objet de la politique de confidentialité",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "La présente politique de confidentialité a pour objectif d’informer les utilisateurs de l’application Church Connect sur la manière dont leurs données à caractère personnel sont collectées, utilisées, conservées et protégées."
+      },
+      {
+        "type": "paragraph",
+        "text": "Church Connect est une application mobile destinée à faciliter la communication, l’organisation et le partage d’informations au sein de l’Église Protestante Évangélique de Châtelet. Dans le cadre de son fonctionnement, certaines données personnelles doivent être traitées afin de fournir les différents services proposés par l’application."
+      },
+      {
+        "type": "paragraph",
+        "text": "Le traitement de ces informations doit être réalisé conformément au Règlement Général sur la Protection des Données (RGPD) et aux dispositions applicables en Belgique en matière de protection des données."
+      }
+    ]
+  },
+  {
+    "title": "2. Responsable du traitement",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Le responsable du traitement est l’organisation qui détermine les finalités et les moyens du traitement des données personnelles effectué au travers de Church Connect."
+      },
+      {
+        "type": "paragraph",
+        "text": "Responsable du traitement : Église Protestante Évangélique de Châtelet\nAdresse : Rue des Gaux 19, 6200 Châtelet, Belgique\nAdresse e-mail de contact : pasteur@epechatelet.be"
+      },
+      {
+        "type": "paragraph",
+        "text": "Les utilisateurs peuvent utiliser cette adresse e-mail pour toute question relative au traitement de leurs données personnelles ou à l’exercice de leurs droits."
+      }
+    ]
+  },
+  {
+    "title": "3. Données personnelles collectées",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Church Connect collecte uniquement les données nécessaires au fonctionnement de ses services."
+      },
+      {
+        "type": "paragraph",
+        "text": "Selon les fonctionnalités utilisées, les données suivantes peuvent notamment être traitées :"
+      },
+      {
+        "type": "bullet",
+        "text": "adresse e-mail ;"
+      },
+      {
+        "type": "bullet",
+        "text": "nom et prénom ;"
+      },
+      {
+        "type": "bullet",
+        "text": "photo de profil ;"
+      },
+      {
+        "type": "bullet",
+        "text": "identifiant unique du compte utilisateur ;"
+      },
+      {
+        "type": "bullet",
+        "text": "rôle de l’utilisateur dans l’application ;"
+      },
+      {
+        "type": "bullet",
+        "text": "appartenance aux différents groupes ;"
+      },
+      {
+        "type": "bullet",
+        "text": "rôle occupé au sein d’un groupe ;"
+      },
+      {
+        "type": "bullet",
+        "text": "informations relatives aux activités et aux plannings ;"
+      },
+      {
+        "type": "bullet",
+        "text": "interactions avec certaines fonctionnalités de l’application, notamment les favoris et les mentions « J’aime » ;"
+      },
+      {
+        "type": "bullet",
+        "text": "données techniques nécessaires au fonctionnement et à la sécurisation de l’application."
+      },
+      {
+        "type": "paragraph",
+        "text": "Les informations qui ne sont pas nécessaires au fonctionnement de Church Connect ne sont pas destinées à être collectées."
+      }
+    ]
+  },
+  {
+    "title": "4. Données relatives au contexte religieux",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Church Connect étant destinée à une congrégation religieuse, certaines informations traitées dans l’application peuvent révéler directement ou indirectement les convictions religieuses ou l’appartenance à une communauté religieuse d’un utilisateur."
+      },
+      {
+        "type": "paragraph",
+        "text": "Ces informations peuvent constituer des catégories particulières de données à caractère personnel au sens de l’article 9 du RGPD et nécessitent, par conséquent, une protection renforcée."
+      },
+      {
+        "type": "paragraph",
+        "text": "L’accès à ces informations doit être limité aux personnes autorisées et leur utilisation doit rester strictement liée aux activités légitimes de l’Église Protestante Évangélique de Châtelet et aux finalités prévues par Church Connect."
+      }
+    ]
+  },
+  {
+    "title": "5. Finalités du traitement",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Les données personnelles collectées sont utilisées afin de permettre le fonctionnement des différentes fonctionnalités de Church Connect."
+      },
+      {
+        "type": "paragraph",
+        "text": "Elles peuvent notamment être traitées afin de :"
+      },
+      {
+        "type": "bullet",
+        "text": "créer et gérer les comptes utilisateurs ;"
+      },
+      {
+        "type": "bullet",
+        "text": "authentifier les utilisateurs ;"
+      },
+      {
+        "type": "bullet",
+        "text": "gérer les profils ;"
+      },
+      {
+        "type": "bullet",
+        "text": "attribuer et contrôler les rôles et permissions ;"
+      },
+      {
+        "type": "bullet",
+        "text": "gérer l’appartenance aux différents groupes ;"
+      },
+      {
+        "type": "bullet",
+        "text": "organiser les activités et les plannings ;"
+      },
+      {
+        "type": "bullet",
+        "text": "diffuser des annonces aux utilisateurs concernés ;"
+      },
+      {
+        "type": "bullet",
+        "text": "envoyer des notifications ;"
+      },
+      {
+        "type": "bullet",
+        "text": "permettre l’accès aux prédications et aux fonctionnalités associées ;"
+      },
+      {
+        "type": "bullet",
+        "text": "enregistrer les favoris et les mentions « J’aime » ;"
+      },
+      {
+        "type": "bullet",
+        "text": "assurer la sécurité et le fonctionnement technique de l’application."
+      },
+      {
+        "type": "paragraph",
+        "text": "Les données personnelles ne doivent pas être utilisées pour des finalités incompatibles avec celles présentées dans cette politique."
+      }
+    ]
+  },
+  {
+    "title": "6. Base juridique des traitements",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Chaque traitement de données personnelles effectué dans Church Connect doit reposer sur une base juridique prévue par le RGPD."
+      },
+      {
+        "type": "paragraph",
+        "text": "Selon la fonctionnalité concernée, les traitements peuvent notamment reposer sur le consentement de la personne concernée ou sur une autre base juridique appropriée prévue par le RGPD."
+      },
+      {
+        "type": "paragraph",
+        "text": "Une attention particulière est accordée aux traitements susceptibles de révéler les convictions religieuses des utilisateurs. Ces données appartiennent aux catégories particulières de données personnelles visées par l’article 9 du RGPD et leur traitement doit respecter les conditions spécifiques prévues par celui-ci."
+      },
+      {
+        "type": "paragraph",
+        "text": "Dans le cadre d’une utilisation réelle de Church Connect, la base juridique appropriée doit être déterminée pour chaque traitement par le responsable du traitement, à savoir l’Église Protestante Évangélique de Châtelet."
+      }
+    ]
+  },
+  {
+    "title": "7. Destinataires des données",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Les données personnelles sont accessibles uniquement aux personnes qui en ont besoin dans le cadre de leurs fonctions et selon les permissions qui leur sont attribuées."
+      },
+      {
+        "type": "paragraph",
+        "text": "Selon la nature des informations, les données peuvent notamment être accessibles :"
+      },
+      {
+        "type": "bullet",
+        "text": "à l’utilisateur concerné ;"
+      },
+      {
+        "type": "bullet",
+        "text": "aux responsables des groupes auxquels il appartient ;"
+      },
+      {
+        "type": "bullet",
+        "text": "aux administrateurs autorisés ;"
+      },
+      {
+        "type": "bullet",
+        "text": "au responsable de la congrégation lorsque ses fonctions le nécessitent ;"
+      },
+      {
+        "type": "bullet",
+        "text": "aux prestataires techniques nécessaires au fonctionnement de l’application."
+      },
+      {
+        "type": "paragraph",
+        "text": "Les autorisations sont limitées en fonction du rôle de chaque utilisateur afin de réduire les accès non nécessaires aux données personnelles."
+      }
+    ]
+  },
+  {
+    "title": "8. Hébergement et services techniques",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Church Connect utilise Supabase pour plusieurs services techniques nécessaires au fonctionnement de l’application, notamment l’authentification, la base de données et le stockage de certaines ressources."
+      },
+      {
+        "type": "paragraph",
+        "text": "Supabase intervient donc comme prestataire technique dans le cadre du traitement de certaines informations nécessaires au fonctionnement de Church Connect."
+      },
+      {
+        "type": "paragraph",
+        "text": "Dans le cadre d’une mise en production réelle, le responsable du traitement doit notamment vérifier la localisation effective de l’hébergement des données, les conditions contractuelles applicables ainsi que les éventuelles dispositions nécessaires en cas de transfert de données en dehors de l’Espace économique européen."
+      }
+    ]
+  },
+  {
+    "title": "9. Sécurité des données",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Des mesures techniques sont mises en œuvre afin de réduire les risques d’accès non autorisé, de modification, de perte ou de divulgation des données personnelles."
+      },
+      {
+        "type": "paragraph",
+        "text": "Church Connect utilise notamment :"
+      },
+      {
+        "type": "bullet",
+        "text": "un système d’authentification des utilisateurs via Supabase Auth ;"
+      },
+      {
+        "type": "bullet",
+        "text": "une gestion des autorisations basée sur les rôles ;"
+      },
+      {
+        "type": "bullet",
+        "text": "des politiques Row Level Security (RLS) au niveau de la base de données ;"
+      },
+      {
+        "type": "bullet",
+        "text": "une limitation des opérations accessibles selon l’utilisateur connecté ;"
+      },
+      {
+        "type": "bullet",
+        "text": "une séparation entre les mécanismes d’authentification et les données applicatives ;"
+      },
+      {
+        "type": "bullet",
+        "text": "des communications sécurisées avec les services utilisés par l’application."
+      },
+      {
+        "type": "paragraph",
+        "text": "Les accès aux données sont accordés uniquement lorsqu’ils sont nécessaires au fonctionnement de l’application ou à l’exercice des responsabilités attribuées à l’utilisateur."
+      }
+    ]
+  },
+  {
+    "title": "10. Durée de conservation",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Les données personnelles ne doivent être conservées que pendant la durée nécessaire à la réalisation des finalités pour lesquelles elles ont été collectées."
+      },
+      {
+        "type": "paragraph",
+        "text": "Les durées précises de conservation doivent être déterminées par l’Église Protestante Évangélique de Châtelet en fonction de la nature des données et de leur finalité."
+      },
+      {
+        "type": "paragraph",
+        "text": "Lorsqu’un compte utilisateur est supprimé ou qu’une donnée n’est plus nécessaire, celle-ci doit être supprimée ou anonymisée lorsqu’aucune obligation légale ou justification légitime ne nécessite sa conservation."
+      }
+    ]
+  },
+  {
+    "title": "11. Droits des utilisateurs",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Conformément au RGPD et selon les conditions prévues par celui-ci, les utilisateurs disposent notamment :"
+      },
+      {
+        "type": "bullet",
+        "text": "d’un droit d’accès à leurs données personnelles ;"
+      },
+      {
+        "type": "bullet",
+        "text": "d’un droit de rectification des données incorrectes ou incomplètes ;"
+      },
+      {
+        "type": "bullet",
+        "text": "d’un droit à l’effacement ;"
+      },
+      {
+        "type": "bullet",
+        "text": "d’un droit à la limitation du traitement ;"
+      },
+      {
+        "type": "bullet",
+        "text": "d’un droit d’opposition à certains traitements ;"
+      },
+      {
+        "type": "bullet",
+        "text": "d’un droit à la portabilité lorsque celui-ci est applicable ;"
+      },
+      {
+        "type": "bullet",
+        "text": "du droit de retirer leur consentement lorsqu’un traitement repose sur celui-ci."
+      },
+      {
+        "type": "paragraph",
+        "text": "Pour exercer leurs droits ou obtenir des informations concernant le traitement de leurs données personnelles, les utilisateurs peuvent contacter le responsable du traitement à l’adresse suivante : pasteur@epechatelet.be"
+      },
+      {
+        "type": "paragraph",
+        "text": "Une vérification de l’identité du demandeur peut être réalisée lorsque cela est nécessaire afin d’éviter qu’une personne non autorisée puisse accéder aux données personnelles d’un autre utilisateur."
+      }
+    ]
+  },
+  {
+    "title": "12. Retrait du consentement",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Lorsqu’un traitement repose sur le consentement de l’utilisateur, celui-ci peut retirer son consentement à tout moment."
+      },
+      {
+        "type": "paragraph",
+        "text": "Le retrait du consentement ne remet pas en cause la licéité des traitements effectués avant son retrait."
+      },
+      {
+        "type": "paragraph",
+        "text": "Les modalités permettant de retirer le consentement doivent être aussi accessibles que celles permettant de le donner."
+      }
+    ]
+  },
+  {
+    "title": "13. Réclamation auprès de l’Autorité de protection des données",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "Un utilisateur estimant que ses données personnelles ne sont pas traitées conformément à la réglementation applicable peut introduire une réclamation auprès de l’autorité de contrôle compétente."
+      },
+      {
+        "type": "paragraph",
+        "text": "En Belgique, l’autorité compétente est l’Autorité de protection des données (APD)."
+      },
+      {
+        "type": "paragraph",
+        "text": "L’utilisateur peut également contacter préalablement l’Église Protestante Évangélique de Châtelet à l’adresse pasteur@epechatelet.be afin d’obtenir des informations ou de demander l’exercice de ses droits."
+      }
+    ]
+  },
+  {
+    "title": "14. Modification de la politique de confidentialité",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "La présente politique de confidentialité peut être modifiée afin de tenir compte de l’évolution de Church Connect, de ses fonctionnalités ou des exigences légales applicables."
+      },
+      {
+        "type": "paragraph",
+        "text": "En cas de modification importante concernant le traitement des données personnelles, les utilisateurs devront en être informés de manière appropriée."
+      }
+    ]
+  },
+  {
+    "title": "15. État du document",
+    "blocks": [
+      {
+        "type": "paragraph",
+        "text": "La présente politique de confidentialité constitue un modèle réalisé dans le cadre du développement de Church Connect et du travail de fin d’études associé."
+      },
+      {
+        "type": "paragraph",
+        "text": "Elle présente les principes de protection des données prévus dans le cadre du projet. Certains éléments, notamment les durées précises de conservation et les bases juridiques applicables à chaque traitement, devront être définitivement déterminés et validés par l’Église Protestante Évangélique de Châtelet avant une mise en production réelle de l’application."
+      }
+    ]
+  }
+]

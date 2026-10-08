@@ -14,7 +14,7 @@ export const createPredicationSchema = z.object({
     .trim()
     .optional()
     .refine(
-      (value) => !value || Number.isFinite(Number(value)),
+      (value) => !value || (Number.isInteger(Number(value)) && Number(value) > 0),
       'La durée doit être un nombre.',
     ),
   mediaUrl: z

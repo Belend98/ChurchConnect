@@ -58,11 +58,11 @@ export class SupabaseMessageGroupeRepository
         .eq('contenu', data.contenu)
         .single()
       if (lookupError) throw lookupError
-      return mapMessageGroupe(existing as MessageGroupeRow)
+      return mapMessageGroupe(existing)
     }
     if (error) throw error
 
-    return mapMessageGroupe(message as MessageGroupeRow)
+    return mapMessageGroupe(message)
   }
 
   async listByGroupe(groupeId: string): Promise<MessageGroupeModel[]> {
@@ -74,7 +74,7 @@ export class SupabaseMessageGroupeRepository
 
     if (error) throw error
 
-    return ((data ?? []) as MessageGroupeRow[]).map(mapMessageGroupe)
+    return (data ?? []).map(mapMessageGroupe)
   }
 
   subscribeToNewMessages(

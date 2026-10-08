@@ -28,8 +28,8 @@ export function useNotificationsRealtime() {
       .on('postgres_changes', {
         event: 'DELETE', schema: 'public', table: 'notification',
       }, (payload) => {
-        const id = payload.old.notification_id as string | undefined
-        if (active && id) void applyNotificationChange(queryClient, userId, { type: 'delete', id })
+        const id = payload.old.notification_id
+        if (active && typeof id === 'string' && id) void applyNotificationChange(queryClient, userId, { type: 'delete', id })
       })
       .subscribe((status) => {
         if (active && status === 'SUBSCRIBED') {

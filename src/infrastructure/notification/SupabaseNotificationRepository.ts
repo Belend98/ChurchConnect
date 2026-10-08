@@ -57,7 +57,7 @@ export class SupabaseNotificationRepository
 
     if (error) throw error
 
-    return ((data ?? []) as NotificationRow[]).map(mapNotification)
+    return (data ?? []).map(mapNotification)
   }
 
   async markAllAsRead(userId: string): Promise<NotificationModel[]> {
@@ -69,7 +69,7 @@ export class SupabaseNotificationRepository
       .select(NOTIFICATION_SELECT)
 
     if (error) throw error
-    return ((data ?? []) as NotificationRow[]).map(mapNotification)
+    return (data ?? []).map(mapNotification)
   }
 
   async markAsRead(id: string, userId: string): Promise<NotificationModel | null> {
@@ -82,7 +82,7 @@ export class SupabaseNotificationRepository
       .maybeSingle()
 
     if (error) throw error
-    return data ? mapNotification(data as NotificationRow) : null
+    return data ? mapNotification(data) : null
   }
 
   async deleteById(id: string, userId: string): Promise<void> {

@@ -88,7 +88,7 @@ const SignInScreen = () => {
         <Text style={styles.buttonText}>{isSubmitting ? 'Connexion...' : 'Se connecter'}</Text>
       </Pressable>
 
-      <Pressable onPress={() => router.replace('/(auth)/signup' as never)} style={styles.linkButton}>
+      <Pressable onPress={() => router.replace('/(auth)/signup')} style={styles.linkButton}>
         <Text style={styles.linkText}>Pas de compte ? Créer un compte</Text>
       </Pressable>
     </ScrollView>

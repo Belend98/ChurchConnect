@@ -43,7 +43,7 @@ export class SupabaseAnnonceRepository implements AnnonceRepository {
 
     if (error) throw error
 
-    return mapAnnonce(annonce as AnnonceRow)
+    return mapAnnonce(annonce)
   }
 
   async getById(id: string): Promise<AnnonceModel | null> {
@@ -54,7 +54,7 @@ export class SupabaseAnnonceRepository implements AnnonceRepository {
       .maybeSingle()
 
     if (error) throw error
-    return data ? mapAnnonce(data as AnnonceRow) : null
+    return data ? mapAnnonce(data) : null
   }
 
   async update(id: string, data: UpdateAnnonceModel): Promise<AnnonceModel> {
@@ -70,7 +70,7 @@ export class SupabaseAnnonceRepository implements AnnonceRepository {
       .single()
 
     if (error) throw error
-    return mapAnnonce(annonce as AnnonceRow)
+    return mapAnnonce(annonce)
   }
 
   async delete(id: string): Promise<void> {
@@ -93,6 +93,6 @@ export class SupabaseAnnonceRepository implements AnnonceRepository {
 
     if (error) throw error
 
-    return ((data ?? []) as AnnonceRow[]).map(mapAnnonce)
+    return (data ?? []).map(mapAnnonce)
   }
 }

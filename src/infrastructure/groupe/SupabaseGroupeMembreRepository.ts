@@ -43,7 +43,7 @@ export class SupabaseGroupeMembreRepository
 
     if (error) throw error
 
-    return mapGroupeMembre(membre as GroupeMembreRow)
+    return mapGroupeMembre(membre)
   }
 
   async getById(id: string): Promise<GroupeMembreModel | null> {
@@ -56,7 +56,7 @@ export class SupabaseGroupeMembreRepository
     if (error) throw error
     if (!data) return null
 
-    return mapGroupeMembre(data as GroupeMembreRow)
+    return mapGroupeMembre(data)
   }
 
   async listByGroupe(groupeId: string): Promise<GroupeMembreModel[]> {
@@ -68,7 +68,7 @@ export class SupabaseGroupeMembreRepository
 
     if (error) throw error
 
-    return ((data ?? []) as GroupeMembreRow[]).map(mapGroupeMembre)
+    return (data ?? []).map(mapGroupeMembre)
   }
 
   async listByUser(userId: string): Promise<GroupeMembreModel[]> {
@@ -80,7 +80,7 @@ export class SupabaseGroupeMembreRepository
 
     if (error) throw error
 
-    return ((data ?? []) as GroupeMembreRow[]).map(mapGroupeMembre)
+    return (data ?? []).map(mapGroupeMembre)
   }
 
   async update(
@@ -100,7 +100,7 @@ export class SupabaseGroupeMembreRepository
 
     if (error) throw error
 
-    return mapGroupeMembre(membre as GroupeMembreRow)
+    return mapGroupeMembre(membre)
   }
 
   async delete(id: string): Promise<void> {

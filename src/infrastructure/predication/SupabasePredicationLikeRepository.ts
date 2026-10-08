@@ -52,7 +52,7 @@ export class SupabasePredicationLikeRepository
 
     if (error) throw error
 
-    return mapPredicationLike(data as PredicationLikeRow)
+    return mapPredicationLike(data)
   }
 
   async remove(predicationId: string, userId: string): Promise<void> {

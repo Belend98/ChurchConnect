@@ -59,7 +59,7 @@ export default function MonEspaceScreen() {
           serie: predication.categorieId ?? 'Prédication',
           title: predication.title,
         },
-      } as never,
+      },
     )
   }
 
@@ -107,7 +107,7 @@ export default function MonEspaceScreen() {
         </View>
 
         <Pressable
-          onPress={() => router.push('/(auth)/profil' as never)}
+          onPress={() => router.push('/(auth)/profil')}
           style={styles.secondaryButton}
         >
           <Text style={styles.secondaryButtonText}>Modifier mon profil</Text>
@@ -139,7 +139,7 @@ export default function MonEspaceScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Accès rapides</Text>
         <Pressable
-          onPress={() => router.push('/(tabs)/predication' as never)}
+          onPress={() => router.push('/(tabs)/predication')}
           style={styles.linkRow}
         >
           <View>
@@ -150,7 +150,7 @@ export default function MonEspaceScreen() {
         </Pressable>
 
         <Pressable
-          onPress={() => router.push('/(tabs)/groupe' as never)}
+          onPress={() => router.push('/(tabs)/groupe')}
           style={styles.linkRow}
         >
           <View>

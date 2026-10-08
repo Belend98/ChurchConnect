@@ -54,7 +54,7 @@ export class SupabasePredicationFavoriteRepository
 
     if (error) throw error
 
-    return mapPredicationFavorite(data as PredicationFavoriteRow)
+    return mapPredicationFavorite(data)
   }
 
   async remove(predicationId: string, userId: string): Promise<void> {
@@ -76,7 +76,7 @@ export class SupabasePredicationFavoriteRepository
 
     if (error) throw error
 
-    return ((data ?? []) as PredicationFavoriteRow[]).map(
+    return (data ?? []).map(
       mapPredicationFavorite,
     )
   }

@@ -40,7 +40,7 @@ export class SupabaseGroupeRepository implements GroupeRepository {
 
     if (error) throw error
 
-    return mapGroupe(groupe as GroupeRow)
+    return mapGroupe(groupe)
   }
 
   async getById(id: string): Promise<GroupeModel | null> {
@@ -53,7 +53,7 @@ export class SupabaseGroupeRepository implements GroupeRepository {
     if (error) throw error
     if (!data) return null
 
-    return mapGroupe(data as GroupeRow)
+    return mapGroupe(data)
   }
 
   async list(): Promise<GroupeModel[]> {
@@ -64,7 +64,7 @@ export class SupabaseGroupeRepository implements GroupeRepository {
 
     if (error) throw error
 
-    return ((data ?? []) as GroupeRow[]).map(mapGroupe)
+    return (data ?? []).map(mapGroupe)
   }
 
   async listByIds(ids: string[]): Promise<GroupeModel[]> {
@@ -78,7 +78,7 @@ export class SupabaseGroupeRepository implements GroupeRepository {
 
     if (error) throw error
 
-    return ((data ?? []) as GroupeRow[]).map(mapGroupe)
+    return (data ?? []).map(mapGroupe)
   }
 
   async update(id: string, data: UpdateGroupeModel): Promise<GroupeModel> {
@@ -96,7 +96,7 @@ export class SupabaseGroupeRepository implements GroupeRepository {
 
     if (error) throw error
 
-    return mapGroupe(groupe as GroupeRow)
+    return mapGroupe(groupe)
   }
 
   async delete(id: string): Promise<void> {

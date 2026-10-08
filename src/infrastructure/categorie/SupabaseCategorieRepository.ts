@@ -32,7 +32,7 @@ export class SupabaseCategorieRepository implements CategorieRepository {
     if (error?.code === '23505') throw new Error('Une catégorie porte déjà ce nom.')
     if (error) throw error
 
-    return mapCategorie(categorie as CategorieRow)
+    return mapCategorie(categorie)
   }
 
   async delete(id: string): Promise<void> {
@@ -52,7 +52,7 @@ export class SupabaseCategorieRepository implements CategorieRepository {
 
     if (error) throw error
 
-    return ((data ?? []) as CategorieRow[]).map(mapCategorie)
+    return (data ?? []).map(mapCategorie)
   }
 
   async update(
@@ -71,6 +71,6 @@ export class SupabaseCategorieRepository implements CategorieRepository {
     if (error?.code === '23505') throw new Error('Une catégorie porte déjà ce nom.')
     if (error) throw error
 
-    return mapCategorie(categorie as CategorieRow)
+    return mapCategorie(categorie)
   }
 }

@@ -25,9 +25,7 @@ const PROFIL_SELECT =
   'id, username, nom, prenom, bio, image_url, date_naissance, created_at, role_app, statut_acces'
 
 function toAppRole(role: string | null): AppRole {
-  if (APP_ROLES.includes(role as AppRole)) return role as AppRole
-
-  return DEFAULT_APP_ROLE
+  return APP_ROLES.find((appRole) => appRole === role) ?? DEFAULT_APP_ROLE
 }
 
 export function mapProfil(data: ProfilRow): ProfilModel {
@@ -68,7 +66,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
     ).select(PROFIL_SELECT).single()
 
     if (error) throw error
-    return mapProfil(profile as ProfilRow)
+    return mapProfil(profile)
   }
 
   async findByUsername(username: string): Promise<ProfilModel | null> {
@@ -81,7 +79,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
     if (error) throw error
     if (!data) return null
 
-    return mapProfil(data as ProfilRow)
+    return mapProfil(data)
   }
 
   async getProfile(userId: string): Promise<ProfilModel | null> {
@@ -94,7 +92,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
     if (error) throw error
     if (!data) return null
 
-    return mapProfil(data as ProfilRow)
+    return mapProfil(data)
   }
 
   async listCommunityMembers(limit?: number): Promise<ProfilModel[]> {
@@ -112,7 +110,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
 
     if (error) throw error
 
-    return ((data ?? []) as ProfilRow[]).map(mapProfil)
+    return (data ?? []).map(mapProfil)
   }
 
   async ensurePendingProfile(userId: string, nom: string, prenom?: string): Promise<ProfilModel> {
@@ -132,7 +130,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
       .eq('statut_acces', 'en_attente')
       .order('created_at', { ascending: true })
     if (error) throw error
-    return ((data ?? []) as ProfilRow[]).map(mapProfil)
+    return (data ?? []).map(mapProfil)
   }
 
   async listRejectedMembers(): Promise<ProfilModel[]> {
@@ -141,7 +139,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
       .eq('statut_acces', 'refuse')
       .order('created_at', { ascending: true })
     if (error) throw error
-    return ((data ?? []) as ProfilRow[]).map(mapProfil)
+    return (data ?? []).map(mapProfil)
   }
 
   async decideAccess(userId: string, accepted: boolean): Promise<void> {
@@ -163,7 +161,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
 
     if (error) throw error
 
-    return ((data ?? []) as ProfilRow[]).map(mapProfil)
+    return (data ?? []).map(mapProfil)
   }
 
   async updateProfile(userId: string, data: CreateProfilModel): Promise<ProfilModel> {
@@ -183,7 +181,7 @@ export class SupabaseProfilRepository implements ProfilRepository {
       .single()
 
     if (error) throw error
-    return mapProfil(profile as ProfilRow)
+    return mapProfil(profile)
   }
 
 }

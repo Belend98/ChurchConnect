@@ -134,7 +134,7 @@ export default function PredicationScreen() {
           serie: getCategoryName(predication.categorieId),
           title: predication.title,
         },
-      } as never,
+      },
     )
   }
 
@@ -262,7 +262,7 @@ export default function PredicationScreen() {
           mediaUrl: predication.mediaUrl,
           title: predication.title,
         },
-      } as never,
+      },
     )
   }
 
@@ -365,7 +365,7 @@ export default function PredicationScreen() {
         </View>
         {canManagePredicationItems ? (
           <Pressable
-            onPress={() => router.push('/create-predication' as never)}
+            onPress={() => router.push('/create-predication')}
             style={styles.sortButton}
           >
             <Text style={styles.sortButtonText}>Créer</Text>

@@ -25,22 +25,16 @@ import { BirthDateField } from '@/presentation/component/BirthDateField'
 import { cacheCurrentProfile } from '@/presentation/queries/profilQueries'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-type SupabaseLikeError = {
-  code?: string
-  message?: string
-  details?: string
-}
-
 function toReadableProfileError(error: unknown): string {
   if (typeof error === 'object' && error !== null) {
-    const err = error as SupabaseLikeError
-
-    if (err.code === '23505') {
+    if ('code' in error && error.code === '23505') {
       return "Ce nom d'utilisateur est deja utilise. Choisis-en un autre."
     }
 
-    if (err.message) {
-      return err.details ? `${err.message} (${err.details})` : err.message
+    if ('message' in error && typeof error.message === 'string' && error.message) {
+      return 'details' in error && typeof error.details === 'string' && error.details
+        ? `${error.message} (${error.details})`
+        : error.message
     }
   }
 

@@ -19,9 +19,11 @@ export function usePredicationFavoritesRealtime() {
         event: 'INSERT', schema: 'public', table: 'predication_favorites', filter: `user_id=eq.${userId}`,
       }, async (payload) => {
         if (!active || payload.new.user_id !== userId) return
+        const predicationId = payload.new.predication_id
+        if (typeof predicationId !== 'string' || !predicationId) return
         await queryClient.cancelQueries({ queryKey })
         if (!active) return
-        cachePredicationFavorite(queryClient, queryKey, payload.new.predication_id as string, true)
+        cachePredicationFavorite(queryClient, queryKey, predicationId, true)
         if (!queryClient.getQueryData(queryKey)) void queryClient.invalidateQueries({ queryKey })
       })
       .on('postgres_changes', {

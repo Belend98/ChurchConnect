@@ -21,9 +21,9 @@ export function useGroupesRealtime() {
       }, async (payload) => {
         if (!active || payload.eventType === 'INSERT') return
         const id = payload.eventType === 'DELETE'
-          ? payload.old.groupe_id as string | undefined
-          : payload.new.groupe_id as string
-        if (!id) return
+          ? payload.old.groupe_id
+          : payload.new.groupe_id
+        if (typeof id !== 'string' || !id) return
 
         await Promise.all([
           queryClient.cancelQueries({ queryKey: groupeKeys.list(userId) }),
@@ -45,7 +45,8 @@ export function useGroupesRealtime() {
           return
         }
 
-        const id = payload.new.groupe_id as string
+        const id = payload.new.groupe_id
+        if (typeof id !== 'string' || !id) return
         void queryClient.invalidateQueries({ queryKey: groupeKeys.members(userId, id) })
         if (payload.new.user_id === userId) {
           void queryClient.invalidateQueries({ queryKey: groupeKeys.list(userId) })

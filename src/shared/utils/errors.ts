@@ -10,13 +10,11 @@ export function toErrorMessage(error: unknown, fallback = 'Une erreur est surven
   if (error instanceof Error) return error.message
 
   if (typeof error === 'object' && error !== null) {
-    const candidate = error as {
-      details?: unknown
-      hint?: unknown
-      message?: unknown
-    }
-
-    const parts = [candidate.message, candidate.details, candidate.hint].filter(
+    const parts = [
+      'message' in error ? error.message : undefined,
+      'details' in error ? error.details : undefined,
+      'hint' in error ? error.hint : undefined,
+    ].filter(
       (part): part is string => typeof part === 'string' && part.trim() !== '',
     )
 

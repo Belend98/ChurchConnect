@@ -44,7 +44,7 @@ export class SupabasePredicRepository implements PredicationRepository {
 
     if (error) throw error
 
-    return mapPredication(predication as PredicationRow)
+    return mapPredication(predication)
   }
 
   async getById(id: string): Promise<PredicationModel | null> {
@@ -57,7 +57,7 @@ export class SupabasePredicRepository implements PredicationRepository {
     if (error) throw error
     if (!data) return null
 
-    return mapPredication(data as PredicationRow)
+    return mapPredication(data)
   }
 
   async list(): Promise<PredicationModel[]> {
@@ -68,7 +68,7 @@ export class SupabasePredicRepository implements PredicationRepository {
 
     if (error) throw error
 
-    return ((data ?? []) as PredicationRow[]).map(mapPredication)
+    return (data ?? []).map(mapPredication)
   }
 
   async update(
@@ -94,7 +94,7 @@ export class SupabasePredicRepository implements PredicationRepository {
       )
     }
 
-    return mapPredication(predication as PredicationRow)
+    return mapPredication(predication)
   }
 
   async delete(id: string): Promise<void> {

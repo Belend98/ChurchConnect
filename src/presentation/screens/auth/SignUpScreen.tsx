@@ -1,12 +1,13 @@
 import { authService } from '@/composition/Auth'
 import { signUpSchema, type SignUpInput } from '@/domain/rules/authSchema'
+import privacyPolicySections from '@/shared/content/privacyPolicy.json'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
 const SignUpScreen = () => {
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<SignUpInput>({
@@ -21,6 +22,7 @@ const SignUpScreen = () => {
     },
   })
   const [errorText, setErrorText] = useState<string | null>(null)
+  const [privacyPolicyVisible, setPrivacyPolicyVisible] = useState(false)
 
   const onSubmit = async (data: SignUpInput) => {
     setErrorText(null)
@@ -126,6 +128,61 @@ const SignUpScreen = () => {
       />
       {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>}
 
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Consulter la politique de confidentialité"
+        onPress={() => setPrivacyPolicyVisible(true)}
+        style={styles.privacyLinkButton}
+      >
+        <Text style={styles.privacyLinkText}>Politique de confidentialité</Text>
+      </Pressable>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={privacyPolicyVisible}
+        onRequestClose={() => setPrivacyPolicyVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View accessibilityViewIsModal style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalEyebrow}>CHURCH CONNECT</Text>
+              <Text accessibilityRole="header" style={styles.modalTitle}>Politique de confidentialité</Text>
+            </View>
+            <ScrollView
+              style={styles.modalContent}
+              contentContainerStyle={styles.modalContentContainer}
+              showsVerticalScrollIndicator
+            >
+              {privacyPolicySections.map((section) => (
+                <View key={section.title} style={styles.policySection}>
+                  <Text accessibilityRole="header" style={styles.policySectionTitle}>{section.title}</Text>
+                  {section.blocks.map((block, index) => (
+                    block.type === 'bullet' ? (
+                      <View key={index} style={styles.policyBulletRow}>
+                        <Text style={styles.policyBullet}>•</Text>
+                        <Text selectable style={[styles.modalText, styles.policyBulletText]}>{block.text}</Text>
+                      </View>
+                    ) : (
+                      <Text key={index} selectable style={[styles.modalText, styles.policyParagraph]}>{block.text}</Text>
+                    )
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.modalFooter}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setPrivacyPolicyVisible(false)}
+                style={styles.button}
+              >
+                <Text style={styles.buttonText}>Fermer</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Controller
         control={control}
         name="rgpdConsent"
@@ -203,6 +260,92 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 14,
     backgroundColor: colors.surfaceContainerLowest,
+  },
+  privacyLinkButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    marginBottom: 4,
+  },
+  privacyLinkText: {
+    color: colors.secondary,
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  modalCard: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 640,
+    height: '85%',
+    maxHeight: 760,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceContainerHigh,
+  },
+  modalEyebrow: {
+    color: colors.tertiary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  modalTitle: {
+    color: colors.primary,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  modalContentContainer: {
+    padding: 20,
+  },
+  policySection: {
+    marginBottom: 24,
+  },
+  policySectionTitle: {
+    color: colors.primary,
+    fontSize: 16,
+    lineHeight: 23,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  policyParagraph: {
+    marginBottom: 10,
+  },
+  policyBulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 6,
+  },
+  policyBullet: {
+    color: colors.tertiary,
+    fontSize: 16,
+    lineHeight: 23,
+  },
+  policyBulletText: {
+    flex: 1,
+  },
+  modalFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.surfaceContainerHigh,
+  },
+  modalText: {
+    color: colors.onSurface,
+    fontSize: 14,
+    lineHeight: 23,
   },
   consentRow: {
     alignItems: 'flex-start',
