@@ -2,7 +2,7 @@ import type {
   CreateMessageGroupeModel,
   MessageGroupeModel,
   UnsubscribeMessageGroupe,
-} from '@/domain/entités/MessageGroupe'
+} from '@/domain/entities/MessageGroupe'
 import type { MessageGroupeRepository } from '@/domain/repositories/MessageGroupeRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 

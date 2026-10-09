@@ -1,4 +1,4 @@
-import type { NotificationModel } from '@/domain/entités/Notification'
+import type { NotificationModel } from '@/domain/entities/Notification'
 import type { QueryClient } from '@tanstack/react-query'
 
 export const notificationsQueryKey = (userId: string | null) =>

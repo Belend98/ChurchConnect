@@ -1,7 +1,7 @@
 import type {
   CategorieModel,
   CreateCategorieModel,
-} from '@/domain/entités/Categorie'
+} from '@/domain/entities/Categorie'
 import type { CategorieRepository } from '@/domain/repositories/CategorieRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 

@@ -10,10 +10,10 @@ import {
   isGroupCreator,
   type GroupeModel,
   type UpdateGroupeModel,
-} from '@/domain/entités/Groupe'
-import type { MessageGroupeModel } from '@/domain/entités/MessageGroupe'
-import type { GroupeMembreModel } from '@/domain/entités/GroupeMember'
-import type { ProfilModel } from '@/domain/entités/Profil'
+} from '@/domain/entities/Groupe'
+import type { MessageGroupeModel } from '@/domain/entities/MessageGroupe'
+import type { GroupeMembreModel } from '@/domain/entities/GroupeMember'
+import type { ProfilModel } from '@/domain/entities/Profil'
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
 import { cacheGroupe, groupeKeys, removeCachedGroupe } from '@/presentation/queries/groupeQueries'
 import { colors } from '@/shared/theme/colors'

@@ -1,6 +1,6 @@
 import { notificationService } from '@/composition/notification'
 import { groupeService } from '@/composition/groupe'
-import type { NotificationModel } from '@/domain/entités/Notification'
+import type { NotificationModel } from '@/domain/entities/Notification'
 import { useNotifications } from '@/presentation/hooks/notification/useNotifications'
 import { applyNotificationChange, notificationsQueryKey } from '@/presentation/queries/notificationQueries'
 import { groupeKeys, removeCachedGroupe } from '@/presentation/queries/groupeQueries'

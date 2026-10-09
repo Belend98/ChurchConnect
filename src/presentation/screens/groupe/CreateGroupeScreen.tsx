@@ -1,5 +1,5 @@
 import { groupeService } from '@/composition/groupe'
-import type { CreateGroupeModel } from '@/domain/entités/Groupe'
+import type { CreateGroupeModel } from '@/domain/entities/Groupe'
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
 import { cacheGroupe, groupeKeys } from '@/presentation/queries/groupeQueries'
 import { colors } from '@/shared/theme/colors'

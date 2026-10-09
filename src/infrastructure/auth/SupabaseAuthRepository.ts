@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js'
-import type { AuthUser } from '@/domain/entités/AuthUser'
+import type { AuthUser } from '@/domain/entities/AuthUser'
 import type { AuthResult, AuthRepository } from '@/domain/repositories/AuthRepository'
 import { supabase } from '../supabase/client'
 

@@ -2,7 +2,7 @@ import type {
   CreatePredicationModel,
   PredicationModel,
   UpdatePredicationModel,
-} from '@/domain/entités/Predication'
+} from '@/domain/entities/Predication'
 import type { PredicationRepository } from '@/domain/repositories/PredicationRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 
@@ -90,7 +90,7 @@ export class SupabasePredicRepository implements PredicationRepository {
     if (error) throw error
     if (!predication) {
       throw new Error(
-        "Aucune prédication n'a été modifiée. Vérifie que la policy RLS update est appliquée et que l'identifiant existe.",
+        "Aucune prédication n'a été modifiée.",
       )
     }
 
@@ -108,7 +108,7 @@ export class SupabasePredicRepository implements PredicationRepository {
     if (error) throw error
     if (!data) {
       throw new Error(
-        "Aucune prédication n'a été supprimée. Vérifie que la policy RLS delete est appliquée et que l'identifiant existe.",
+        "Aucune prédication n'a été supprimée.",
       )
     }
   }

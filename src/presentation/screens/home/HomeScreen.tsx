@@ -5,7 +5,7 @@ import {
   canManagePredications,
   getAppRoleLabel,
   type ProfilModel,
-} from '@/domain/entités/Profil'
+} from '@/domain/entities/Profil'
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
 import { useNotifications } from '@/presentation/hooks/notification/useNotifications'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'

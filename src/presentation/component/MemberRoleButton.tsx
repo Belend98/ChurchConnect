@@ -1,5 +1,5 @@
 import { changeUserRoleUseCase, deleteAccountUseCase } from '@/composition/profil'
-import { getAppRoleLabel, type ProfilModel } from '@/domain/entités/Profil'
+import { getAppRoleLabel, type ProfilModel } from '@/domain/entities/Profil'
 import type { ManagedAppRole } from '@/domain/repositories/RoleAdminGateway'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { cacheCommunityMemberRole, cacheCurrentProfile, communityMembersQueryKey, currentProfileQueryKey } from '@/presentation/queries/profilQueries'

@@ -4,7 +4,7 @@ import {
   type AppRole,
   type CreateProfilModel,
   type ProfilModel,
-} from '@/domain/entités/Profil'
+} from '@/domain/entities/Profil'
 import type { ProfilRepository } from '@/domain/repositories/ProfilRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 

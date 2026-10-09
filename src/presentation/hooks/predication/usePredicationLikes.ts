@@ -1,5 +1,5 @@
 import { predicationService } from '@/composition/predication'
-import type { PredicationModel } from '@/domain/entités/Predication'
+import type { PredicationModel } from '@/domain/entities/Predication'
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
 import { predicationLikeKey, type PredicationLikes } from '@/presentation/queries/predicationQueries'
 import { useQueries } from '@tanstack/react-query'

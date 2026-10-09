@@ -1,4 +1,4 @@
-import type { PredicationModel } from '@/domain/entités/Predication'
+import type { PredicationModel } from '@/domain/entities/Predication'
 import { colors } from '@/shared/theme/colors'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 

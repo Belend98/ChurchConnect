@@ -2,7 +2,7 @@ import type {
   CreateGroupeModel,
   GroupeModel,
   UpdateGroupeModel,
-} from '@/domain/entités/Groupe'
+} from '@/domain/entities/Groupe'
 
 export interface GroupeRepository {
   create(data: CreateGroupeModel): Promise<GroupeModel>

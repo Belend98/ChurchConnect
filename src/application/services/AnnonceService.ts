@@ -3,8 +3,8 @@ import type {
   AnnonceModel,
   CreateAnnonceModel,
   UpdateAnnonceModel,
-} from '@/domain/entités/Annonce'
-import { canManagePredications } from '@/domain/entités/Profil'
+} from '@/domain/entities/Annonce'
+import { canManagePredications } from '@/domain/entities/Profil'
 import type { AnnonceRepository } from '@/domain/repositories/AnnonceRepository'
 import type { ProfilRepository } from '@/domain/repositories/ProfilRepository'
 

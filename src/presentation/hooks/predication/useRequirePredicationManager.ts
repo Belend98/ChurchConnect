@@ -1,4 +1,4 @@
-import { canManagePredications } from '@/domain/entités/Profil'
+import { canManagePredications } from '@/domain/entities/Profil'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { router, type Href } from 'expo-router'
 import { useEffect } from 'react'

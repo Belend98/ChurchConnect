@@ -1,4 +1,4 @@
-import type { CreateProfilModel, ProfilModel } from '../entités/Profil'
+import type { CreateProfilModel, ProfilModel } from '../entities/Profil'
 
 export interface ProfilRepository {
   createProfile(userId: string, data: CreateProfilModel): Promise<ProfilModel>

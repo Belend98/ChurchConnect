@@ -1,5 +1,11 @@
 {
   "build": {
+    "ios-demo": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
+      }
+    },
     "preview": {
       "environment": "preview",
       "distribution": "internal",

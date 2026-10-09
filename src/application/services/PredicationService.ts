@@ -3,8 +3,8 @@ import type {
     CreatePredicationModel,
     PredicationModel,
     UpdatePredicationModel,
-} from '@/domain/entités/Predication'
-import type { PredicationFavoriteModel } from '@/domain/entités/PredicationEngagement/PredicationFavorite'
+} from '@/domain/entities/Predication'
+import type { PredicationFavoriteModel } from '@/domain/entities/PredicationEngagement/PredicationFavorite'
 import type {
     PredicationAudioStorage,
     UploadPredicationAudioInput,

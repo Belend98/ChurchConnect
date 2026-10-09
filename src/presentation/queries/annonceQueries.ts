@@ -1,4 +1,4 @@
-import type { AnnonceModel } from '@/domain/entités/Annonce'
+import type { AnnonceModel } from '@/domain/entities/Annonce'
 import type { QueryClient } from '@tanstack/react-query'
 
 export const ANNONCES_QUERY_KEY = ['annonces'] as const

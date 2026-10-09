@@ -1,4 +1,4 @@
-import type { GroupeMembreModel } from '@/domain/entités/GroupeMember'
+import type { GroupeMembreModel } from '@/domain/entities/GroupeMember'
 
 export const GROUP_ROLES = ['createur', 'admin', 'membre'] as const
 

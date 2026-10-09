@@ -410,7 +410,7 @@ Le dossier `src` contient le code principal de l'application, organisé par couc
 
 - `application` pour les services applicatifs ;
 - `composition` pour l'assemblage des dépendances ;
-- `domain` pour les entités, règles et interfaces ;
+- `domain` pour les entities, règles et interfaces ;
 - `infrastructure` pour les implémentations Supabase et Storage ;
 - `presentation` pour les écrans, composants et hooks ;
 - `shared` pour les éléments communs.

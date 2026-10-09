@@ -1,7 +1,7 @@
 import type {
   NotificationModel,
   UnsubscribeNotification,
-} from '@/domain/entités/Notification'
+} from '@/domain/entities/Notification'
 
 export interface NotificationRepository {
   countUnread(userId: string): Promise<number>

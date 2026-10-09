@@ -2,7 +2,7 @@ import type { AuthService } from '@/application/services/AuthService'
 import type {
   NotificationModel,
   UnsubscribeNotification,
-} from '@/domain/entités/Notification'
+} from '@/domain/entities/Notification'
 import type { NotificationRepository } from '@/domain/repositories/NotificationRepository'
 
 export class NotificationService {

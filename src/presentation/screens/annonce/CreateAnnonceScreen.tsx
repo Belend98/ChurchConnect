@@ -1,6 +1,6 @@
 import { annonceService } from '@/composition/annonce'
-import type { CreateAnnonceModel } from '@/domain/entités/Annonce'
-import { canManagePredications } from '@/domain/entités/Profil'
+import type { CreateAnnonceModel } from '@/domain/entities/Annonce'
+import { canManagePredications } from '@/domain/entities/Profil'
 import { useCurrentUserId } from '@/presentation/hooks/auth/useCurrentUserId'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { annoncesQueryKey, applyAnnonceChange } from '@/presentation/queries/annonceQueries'

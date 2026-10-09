@@ -1,4 +1,4 @@
-import type { PredicationModel } from '@/domain/entités/Predication'
+import type { PredicationModel } from '@/domain/entities/Predication'
 import { supabase } from '@/infrastructure/supabase/client'
 import { PREDICATIONS_QUERY_KEY } from '@/presentation/queries/predicationQueries'
 import { useQueryClient } from '@tanstack/react-query'

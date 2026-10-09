@@ -1,7 +1,7 @@
 import type {
   CategorieModel,
   CreateCategorieModel,
-} from '@/domain/entités/Categorie'
+} from '@/domain/entities/Categorie'
 
 export interface CategorieRepository {
   create(data: CreateCategorieModel): Promise<CategorieModel>

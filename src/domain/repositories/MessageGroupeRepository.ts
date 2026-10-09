@@ -2,7 +2,7 @@ import type {
   CreateMessageGroupeModel,
   MessageGroupeModel,
   UnsubscribeMessageGroupe,
-} from '@/domain/entités/MessageGroupe'
+} from '@/domain/entities/MessageGroupe'
 
 export interface MessageGroupeRepository {
   create(data: CreateMessageGroupeModel): Promise<MessageGroupeModel>

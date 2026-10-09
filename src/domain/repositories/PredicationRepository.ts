@@ -2,7 +2,7 @@ import type {
   CreatePredicationModel,
   PredicationModel,
   UpdatePredicationModel,
-} from '@/domain/entités/Predication'
+} from '@/domain/entities/Predication'
 
 export interface PredicationRepository {
   create(data: CreatePredicationModel): Promise<PredicationModel>

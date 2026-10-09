@@ -1,4 +1,4 @@
-import type { CreateProfilModel } from '../entités/Profil'
+import type { CreateProfilModel } from '../entities/Profil'
 import { z } from 'zod'
 import { formatDateOnly, isValidDateOnly } from '@/shared/utils/dateOnly'
 

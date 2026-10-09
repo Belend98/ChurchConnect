@@ -1,5 +1,5 @@
 import { predicationService } from '@/composition/predication'
-import type { PredicationModel } from '@/domain/entités/Predication'
+import type { PredicationModel } from '@/domain/entities/Predication'
 import {
   createPredicationSchema,
   type CreatePredicationInput,

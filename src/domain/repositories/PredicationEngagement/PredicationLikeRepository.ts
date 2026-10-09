@@ -1,4 +1,4 @@
-import type { PredicationLikeModel } from '@/domain/entités/PredicationEngagement/PredicationLike'
+import type { PredicationLikeModel } from '@/domain/entities/PredicationEngagement/PredicationLike'
 
 export interface PredicationLikeRepository {
   exists(predicationId: string, userId: string): Promise<boolean>

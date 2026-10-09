@@ -1,4 +1,4 @@
-import type { GroupeModel } from '@/domain/entités/Groupe'
+import type { GroupeModel } from '@/domain/entities/Groupe'
 import type { QueryClient } from '@tanstack/react-query'
 
 export const GROUPES_QUERY_KEY = ['groupes'] as const

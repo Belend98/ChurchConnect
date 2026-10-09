@@ -3,13 +3,13 @@ import type {
     CreateGroupeModel,
     GroupeModel,
     UpdateGroupeModel,
-} from '@/domain/entités/Groupe'
-import { canDeleteGroup, canManageGroup } from '@/domain/entités/Groupe'
+} from '@/domain/entities/Groupe'
+import { canDeleteGroup, canManageGroup } from '@/domain/entities/Groupe'
 import type {
     CreateGroupeMembreModel,
     GroupeMembreModel,
     UpdateGroupeMembreModel,
-} from '@/domain/entités/GroupeMember'
+} from '@/domain/entities/GroupeMember'
 import type { GroupeMembreRepository } from '@/domain/repositories/GroupeMembreRepository'
 import type { GroupeRepository } from '@/domain/repositories/GroupeRepository'
 import type { ProfilRepository } from '@/domain/repositories/ProfilRepository'

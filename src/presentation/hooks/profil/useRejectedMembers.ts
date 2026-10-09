@@ -1,5 +1,5 @@
 import { deleteAccountUseCase, profilService } from '@/composition/profil'
-import type { ProfilModel } from '@/domain/entités/Profil'
+import type { ProfilModel } from '@/domain/entities/Profil'
 import { useCurrentProfile } from '@/presentation/hooks/profil/useCurrentProfile'
 import { accessRequestsQueryKey, communityMembersQueryKey, currentProfileQueryKey, rejectedMembersQueryKey } from '@/presentation/queries/profilQueries'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'

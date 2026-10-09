@@ -2,7 +2,7 @@ import type {
   AnnonceModel,
   CreateAnnonceModel,
   UpdateAnnonceModel,
-} from '@/domain/entités/Annonce'
+} from '@/domain/entities/Annonce'
 import type { AnnonceRepository } from '@/domain/repositories/AnnonceRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 

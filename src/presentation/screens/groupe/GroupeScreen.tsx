@@ -1,4 +1,4 @@
-import type { GroupeModel } from '@/domain/entités/Groupe'
+import type { GroupeModel } from '@/domain/entities/Groupe'
 import { ListCount } from '@/presentation/component/ListCount'
 import { useGroupes } from '@/presentation/hooks/groupe/useGroupes'
 import { colors } from '@/shared/theme/colors'

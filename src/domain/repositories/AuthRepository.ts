@@ -1,4 +1,4 @@
-import type { AuthUser } from "../entités/AuthUser";
+import type { AuthUser } from "../entities/AuthUser";
 
 export interface AuthResult {
     user: AuthUser | null

@@ -1,4 +1,4 @@
-import type { PredicationFavoriteModel } from '@/domain/entités/PredicationEngagement/PredicationFavorite'
+import type { PredicationFavoriteModel } from '@/domain/entities/PredicationEngagement/PredicationFavorite'
 
 export interface PredicationFavoriteRepository {
   exists(predicationId: string, userId: string): Promise<boolean>

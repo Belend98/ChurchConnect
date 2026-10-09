@@ -2,7 +2,7 @@ import type {
   CreateGroupeModel,
   GroupeModel,
   UpdateGroupeModel,
-} from '@/domain/entités/Groupe'
+} from '@/domain/entities/Groupe'
 import type { GroupeRepository } from '@/domain/repositories/GroupeRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 

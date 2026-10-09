@@ -2,7 +2,7 @@ import type {
   NotificationModel,
   NotificationType,
   UnsubscribeNotification,
-} from '@/domain/entités/Notification'
+} from '@/domain/entities/Notification'
 import type { NotificationRepository } from '@/domain/repositories/NotificationRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 

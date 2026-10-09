@@ -2,7 +2,7 @@ import type {
   AnnonceModel,
   CreateAnnonceModel,
   UpdateAnnonceModel,
-} from '@/domain/entités/Annonce'
+} from '@/domain/entities/Annonce'
 
 export interface AnnonceRepository {
   create(data: CreateAnnonceModel): Promise<AnnonceModel>

@@ -1,4 +1,4 @@
-import type { PredicationFavoriteModel } from '@/domain/entités/PredicationEngagement/PredicationFavorite'
+import type { PredicationFavoriteModel } from '@/domain/entities/PredicationEngagement/PredicationFavorite'
 import type { PredicationFavoriteRepository } from '@/domain/repositories/PredicationEngagement/PredicationFavoriteRepository'
 import { supabase } from '@/infrastructure/supabase/client'
 

@@ -1,4 +1,4 @@
-import type { ProfilModel } from '@/domain/entités/Profil'
+import type { ProfilModel } from '@/domain/entities/Profil'
 import type { ManagedAppRole } from '@/domain/repositories/RoleAdminGateway'
 import type { QueryClient } from '@tanstack/react-query'
 

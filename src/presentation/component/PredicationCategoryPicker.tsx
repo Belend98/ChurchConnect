@@ -1,5 +1,5 @@
 import { categorieService } from '@/composition/categorie'
-import type { CategorieModel } from '@/domain/entités/Categorie'
+import type { CategorieModel } from '@/domain/entities/Categorie'
 import { normalizeCategorieName } from '@/domain/rules/categorieRules'
 import { CATEGORIES_QUERY_KEY } from '@/presentation/queries/categorieQueries'
 import { colors } from '@/shared/theme/colors'

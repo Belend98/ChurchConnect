@@ -6,7 +6,12 @@
     "orientation": "portrait",
     "scheme": "churchconnect",
     "userInterfaceStyle": "automatic",
-    "ios": {},
+    "ios": {
+      "bundleIdentifier": "com.churchconnect.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
     "android": {
       "package": "com.churchconnect.app",
       "predictiveBackGestureEnabled": false,

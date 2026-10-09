@@ -1,7 +1,7 @@
 import { useAccessRequests } from '@/presentation/hooks/profil/useAccessRequests'
 import { useRejectedMembers } from '@/presentation/hooks/profil/useRejectedMembers'
 import { useState } from 'react'
-import type { ProfilModel } from '@/domain/entités/Profil'
+import type { ProfilModel } from '@/domain/entities/Profil'
 import { colors } from '@/shared/theme/colors'
 import { toErrorMessage } from '@/shared/utils/errors'
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
